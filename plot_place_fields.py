@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors #for heatmap colours
 import pickle
 import numpy as np
-from lib_ephys_obj import EphysEpoch
+import lib_ephys_obj as elib
 import sys
 sys.path.append("F:\Spike Sorting\EthovisionPathAnalysis_HDF5")
 import modules.lib_process_data_to_mat as plib
@@ -43,6 +43,7 @@ def calc_spike_coords(tdata, spike_sample, idx_end):
             if i == len(tdata.r_center): pass #avoids an out of index error
             else:
                 spike_coords.append(tdata.r_center[i]) #don't offset this i
+                # print(tdata.r_center[i])
     spike_coords = np.array(spike_coords)
     if len(spike_coords) <1: raise ValueError('No spikes detected in this trial')
     return spike_coords
@@ -156,8 +157,8 @@ def plot_place_field(data, spike_sample, crop_at_target = True, savefig=False):
     else: idx_end = len(data.time)
     
     draw_arena(data, ax)
-    # draw_hole_checks(data, idx_end, ax)
-    draw_spikes(data, spike_sample, idx_end, ax)
+    draw_hole_checks(data, idx_end, ax)
+    # draw_spikes(data, spike_sample, idx_end, ax)
     # spike_coords = calc_spike_coords(data, spike_sample)
     
     plt.plot(data.r_center[:idx_end,0], data.r_center[:idx_end,1], color='k', alpha=0.3) #plot path, alpha 0.3
@@ -171,13 +172,13 @@ def plot_place_field(data, spike_sample, crop_at_target = True, savefig=False):
     ax.add_artist(target)
 
     #draw entrance
-    # for i, _ in enumerate(data.r_nose):
-    #     if np.isnan(data.r_nose[i][0]): continue
-    #     else:
-    #         first_coord = data.r_nose[i]
-    #         break
-    # entrance = plt.Rectangle((first_coord-3.5), 7, 7, fill=False, color='k', alpha=0.8, lw=3)
-    # ax.add_artist(entrance)        
+    for i, _ in enumerate(data.r_nose):
+        if np.isnan(data.r_nose[i][0]): continue
+        else:
+            first_coord = data.r_nose[i]
+            break
+    entrance = plt.Rectangle((first_coord-3.5), 7, 7, fill=False, color='k', alpha=0.8, lw=3)
+    ax.add_artist(entrance)        
     
     if savefig == True:
         plt.savefig(path_data+f'/figs/Placefield_M{data.mouse_number}_T{data.trial}_Cell{neuron}.png', dpi=600, bbox_inches='tight', pad_inches = 0)
@@ -199,27 +200,34 @@ def plot_place_field(data, spike_sample, crop_at_target = True, savefig=False):
 #         tdata.Update()
     
 #     return tdata
-
+#%%
 if __name__ == '__main__':
     path_data =  r'F:\Spike Sorting\Data\3_Raster\2023-12-18_M102'
     
-    exp = '2023-12-18'
-    mouse = 102
+    exp = '2024-02-15'
+    mouse = 105
+    trial = '24'
+    neuron = 1
     
-    (tdata := plib.TrialData()).Load(exp, mouse,'17')
+    # (tdata := plib.TrialData()).Load(exp, mouse,'13')
     
-    edata = EphysEpoch().Load(exp, mouse,'T16-18')
+    # edata = EphysEpoch().Load(exp, mouse,'T13-15')
+    
+    (tedata := elib.EphysTrial()).Load(exp, mouse,trial)
     
     # for i, lab in enumerate(edata.spike_labels):
     #     if lab == ['Pyramidal Cell']: print(i)
 
-    neuron = 14
-    spike_sample = edata.t_spike_train[neuron] - edata.t_TTL[1][0] #synch spike train with TTL REMEMBER TO CHOOSE CORRECT TTL
+    
+    # spike_sample = edata.t_spike_train[neuron] - edata.t_TTL[0][0] #synch spike train with TTL REMEMBER TO CHOOSE CORRECT TTL
     # spikesample_crop = []#crop according to time_ttl
-    print(edata.spike_labels[neuron])
-    print(edata.firingRate[neuron])
-    assert len(spike_sample) > 0
+    print(tedata.cellLabels[neuron])
+    print(tedata.firingRates[neuron])
+    # assert len(spike_sample) > 0
     
-    spikecoords = calc_spike_coords(tdata, spike_sample, tdata.k_reward)
+    # spikecoords = calc_spike_coords(tedata, tedata.t_spikeTrains[14], tedata.k_reward)
     
-    plot_place_field(tdata, spike_sample, crop_at_target=True, savefig=True)
+    # k_times = tedata.k_hole_checks[tedata.k_hole_checks[:,1]<= tedata.k_reward+10]
+    # plot_place_field(tdata, spike_sample, crop_at_target=True, savefig=False)
+    
+    plot_place_field(tedata, tedata.t_spikeTrains[neuron], crop_at_target=True, savefig=False)

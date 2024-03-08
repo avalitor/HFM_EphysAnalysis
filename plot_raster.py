@@ -8,9 +8,9 @@ Make aligned raster plots
 """
 import matplotlib.pyplot as plt
 import numpy as np
-from lib_ephys_obj import EphysEpoch
+import lib_ephys_obj as elib
 import modules.lib_process_data_to_mat as plib
-#%%
+
 
 def get_trial_event_crop(spike_trains, trialdata): #given synched spike trains & trial
     spike_sample_eventcrop = []
@@ -20,9 +20,16 @@ def get_trial_event_crop(spike_trains, trialdata): #given synched spike trains &
         spike_sample_eventcrop.append(n[k_spike_event]-t_reward) #align event to 0 on the x axis
     return spike_sample_eventcrop
 
+def get_intertrial_event_crop(spike_train, event_list, tedata):
+    
+    spike_sample_eventcrop = []
+    for e in event_list:
+        k_spike_event = np.where((spike_train > tedata.time_ttl[e] - 30) & (spike_train < tedata.time_ttl[e] + 30)) #get 30 seconds before and after event
+        spike_sample_eventcrop.append(spike_train[k_spike_event]-tedata.time_ttl[e]) #align event to 0 on the x axis
+    return spike_sample_eventcrop
+
 def get_epoch_event_crop(edata, tdata_list, neuron='all'):
     spike_sample_eventcrop = []
-
     for tr in range(3): #iterate through the 3 trials
         spike_sample_all = [edata.t_spike_train[i] - edata.t_TTL[tr][0] for i in range(len(edata.t_spike_train))] #synch all neuorns to ttl
         # k_cellID = np.where(edata.spike_labels == 'Pyramidal Cell')[0]
@@ -42,7 +49,7 @@ def get_single_cell_trial_spikes(edata, tdata_list, neuron_no):
 
 #%%
 '''get spike sample of single trial'''
-edata = EphysEpoch().Load('2023-12-18', '102','T13-15')
+edata = elib.EphysEpoch().Load('2023-12-18', '102','T13-15')
 (tdata := plib.TrialData()).Load('2023-12-18', '102', '18')
 
 tr = 0 #is it trial 0, 1, 2 in the epoch?
@@ -56,8 +63,8 @@ exp = '2023-12-18'
 mouse = '102'
 
 edata_dict = {
-    'T13-15': EphysEpoch().Load(exp, mouse,'T13-15'),
-    'T16-18': EphysEpoch().Load(exp, mouse,'T16-18'),
+    'T13-15': elib.EphysEpoch().Load(exp, mouse,'T13-15'),
+    'T16-18': elib.EphysEpoch().Load(exp, mouse,'T16-18'),
     }
 
 tdata = [plib.TrialData() for i in range(6)]
@@ -84,15 +91,17 @@ tdata[5].Load(exp, mouse, '18')
 '''get spike sample of single neuron on a single trial'''
 exp = '2023-12-18'
 mouse = '102'
-edata = EphysEpoch().Load(exp, mouse,'T13-15')
-(tdata := plib.TrialData()).Load(exp, mouse, '14')
+edata = elib.EphysEpoch().Load(exp, mouse,'T16-18')
+(tdata := plib.TrialData()).Load(exp, mouse, '18')
 
-tr = 1 #is it trial 0, 1, 2 in the epoch?
+tr = 2 #is it trial 0, 1, 2 in the epoch?
 neuron = 14
 print(edata.spike_labels[neuron])
 print(edata.firingRate[neuron])
 spike_sample = edata.t_spike_train[neuron] - edata.t_TTL[tr][0]
-t_hole_checks = np.sort(tdata.time_ttl[tdata.k_hole_checks[:,1]])
+
+(e := elib.EphysTrial()).Load(exp, mouse, '18')
+t_hole_checks = np.sort(e.time_ttl[tdata.k_hole_checks[:,1]])
 
 # test = np.where((tdata.k_hole_checks[:,1] > 0) & (tdata.k_hole_checks[:,1] < tdata.k_reward)) 
 
@@ -103,10 +112,10 @@ ax.eventplot(spike_sample, lineoffsets=lineoffsets1, color='#5f0f40')
 # ax.eventplot(t_hole_checks, lineoffsets=lineoffsets1, color = '#5f0f40', linestyles='--')
 # plt.plot(t_hole_checks , np.zeros(t_hole_checks.shape),'o', color = '#F18701')
 
-plt.vlines(tdata.time_ttl[tdata.k_reward], min(lineoffsets1)-1, max(lineoffsets1)+1, color='g') #when did mouse find reward
-t_start = tdata.time_ttl[np.isfinite(tdata.r_center)[:,0]][0] #returns the first non-nan coordinate
+plt.vlines(e.time_ttl[tdata.k_reward], min(lineoffsets1)-1, max(lineoffsets1)+1, color='g') #when did mouse find reward
+t_start = e.time_ttl[np.isfinite(tdata.r_center)[:,0]][0] #returns the first non-nan coordinate
 plt.vlines(t_start, min(lineoffsets1)-1, max(lineoffsets1)+1, color='k') #when did trial start
-plt.vlines(tdata.time_ttl[923], min(lineoffsets1)-1, max(lineoffsets1)+1, color='b') #when did trial start
+# plt.vlines(tdata.time_ttl[923], min(lineoffsets1)-1, max(lineoffsets1)+1, color='b') #custom
 
 
 # neuron_no = len(edata_dict['T16-18'].t_spike_train)
@@ -121,12 +130,97 @@ plt.xlabel('Time (s)' , fontsize=20)
 plt.title(f'Cell {neuron}')
 ax.set_yticks([])
 ax.margins(0)
-plt.xlim((t_start-10,tdata.time_ttl[tdata.k_reward]+10))
+plt.xlim((t_start-10,e.time_ttl[tdata.k_reward]+10))
 
 # path_data = rf'F:\Spike Sorting\Data\3_Raster\{exp}_M{mouse}'
 # plt.savefig(path_data+f'/figs/Raster_M{tdata.mouse_number}_T{tdata.trial}_Cell{neuron}.png', dpi=600, bbox_inches='tight', pad_inches = 0)
 
 plt.show()
+
+#%%
+'''NEW MAT FILE get spike sample of single neuron on a single trial'''
+exp = '2024-02-15'
+mouse = '105'
+trial = '24'
+neuron = 3
+
+(edata := elib.EphysTrial()).Load(exp, mouse, trial)
+
+print(edata.cellLabels[neuron])
+print(edata.firingRates[neuron])
+spike_sample = edata.t_spikeTrains[neuron]
+
+
+# test = np.where((edata.k_hole_checks[:,1] > 0) & (edata.k_hole_checks[:,1] < edata.k_reward)) 
+
+'''plot raster of whole trial'''
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(16, 2))
+lineoffsets1 = range(1)
+ax.eventplot(spike_sample, lineoffsets=lineoffsets1, color='#5f0f40')
+
+t_hole_checks = np.sort(edata.time_ttl[edata.k_hole_checks[:,1]])
+plt.plot(t_hole_checks , np.zeros(t_hole_checks.shape),'o', color = '#F18701')
+
+plt.vlines(edata.time_ttl[edata.k_reward], min(lineoffsets1)-1, max(lineoffsets1)+1, color='g') #when did mouse find reward
+t_start = edata.time_ttl[np.isfinite(edata.r_center)[:,0]][0] #returns the first non-nan coordinate
+plt.vlines(t_start, min(lineoffsets1)-1, max(lineoffsets1)+1, color='k') #when did trial start
+# plt.vlines(edata.time_ttl[923], min(lineoffsets1)-1, max(lineoffsets1)+1, color='b') #custom marker
+
+
+# neuron_no = len(edata_dict['T16-18'].t_spike_train)
+# plt.hlines([neuron_no, neuron_no*2, neuron_no*3, neuron_no*4, neuron_no*5], -10, 10, colors='k')
+# pad = neuron_no/2
+# plt.yticks([0+pad, neuron_no+pad, neuron_no*2+pad, neuron_no*3+pad, neuron_no*4+pad, neuron_no*5+pad], 
+#            ['Trial 13', 'Trial 14', 'Trial 15', 'Trial 16', 'Trial 17', 'Trial 18'], fontsize=18)
+
+plt.xticks(fontsize=18)
+plt.xlabel('Time (s)' , fontsize=20)
+# plt.ylabel('Neurons', fontsize=20)
+plt.title(f'Cell {neuron}')
+ax.set_yticks([])
+ax.margins(0)
+plt.xlim((t_start-10,edata.time_ttl[edata.k_reward]+10))
+
+# path_data = rf'F:\Spike Sorting\Data\3_Raster\{exp}_M{mouse}'
+# plt.savefig(path_data+f'/figs/Raster_M{edata.mouse_number}_T{edata.trial}_Cell{neuron}.png', dpi=600, bbox_inches='tight', pad_inches = 0)
+
+plt.show()
+#%%
+'''NEW mat file plot aligned MULTIPLE inter-trial events'''
+exp = '2024-02-15'
+mouse = '105'
+trial = '24'
+neuron = 3
+
+(edata := elib.EphysTrial()).Load(exp, mouse, trial)
+
+print(edata.cellLabels[neuron])
+print(edata.firingRates[neuron])
+spike_train = edata.t_spikeTrains[neuron]
+event_list = edata.k_hole_checks[np.where(edata.k_hole_checks[:,0] == 51)][:,1] #get list of hole checks at reward hole
+
+spike_sample_eventcrop = get_intertrial_event_crop(spike_train, event_list, edata)
+
+
+'''plot 10 sec before and after reward'''
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(16, 8))
+lineoffsets1 = range(len(spike_sample_eventcrop))
+ax.eventplot(spike_sample_eventcrop, lineoffsets=lineoffsets1, color='#5f0f40')
+# plt.vlines(tdata[0].time_ttl[tdata[0].k_reward], min(lineoffsets1)-1, max(lineoffsets1)+1, color='k') #when did mouse find reward
+plt.vlines(0, min(lineoffsets1)-1, max(lineoffsets1)+1, color='g') #when did mouse find reward
+
+
+plt.xticks(fontsize=18)
+plt.xlabel('Time (s)' , fontsize=20)
+
+ax.margins(0)
+# plt.xlim((-30,30))
+
+# path_data = rf'F:\Spike Sorting\Data\3_Raster\{exp}_M{mouse}'
+# plt.savefig(path_data+f'/figs/Raster_HoleCheck_M{edata.mouse_number}_T{edata.trial}_Cell{neuron}.png', dpi=600, bbox_inches='tight', pad_inches = 0)
+
+plt.show()
+
 
 #%%
 '''plot raster of whole trial over multiple trials'''

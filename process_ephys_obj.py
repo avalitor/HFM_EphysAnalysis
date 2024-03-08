@@ -23,9 +23,9 @@ import modules.lib_process_data_to_mat as plib
 
 #%%
 epoch = 2
-path_m = r'H:\Phy\2023-12-18_M103\Day5_T13-18\recording'
+path_m = r'H:\Phy\2024-02-15_M105\Day7_Probe-T19-24\M105\recording'
 
-TTL_in = sio.loadmat(path_m + '\TTL_in-T13-15.mat')['v'] #TTL Pulse
+TTL_in = sio.loadmat(path_m + '\TTL_in-T22-24.mat')['v'] #TTL Pulse
 
 spikes = sio.loadmat(path_m + '\\recording.spikes.cellinfo')['spikes'] #loads the spikes!
 cell_metrics = sio.loadmat(path_m + '\\recording.cell_metrics.cellinfo')['cell_metrics'][0]
@@ -34,14 +34,14 @@ cell_firingRate = cell_metrics['firingRate'][0][0] #gets lables of each neuron
 session = sio.loadmat(path_m + '\\recording.session.mat')['session']
 interval = [session['epochs'][0][0][0][1][0][0][1][0][0], session['epochs'][0][0][0][1][0][0][2][0][0]] #load epoch array
 
-#%%
-exp = '2023-12-18'
-mouse = 103
-trials = 'T13-15'
+#%% update existing files with firing rate
+# exp = '2023-12-18'
+# mouse = 103
+# trials = 'T13-15'
 
-edata = elib.EphysEpoch().Load(exp, mouse, trials)
-edata.firingRate = cell_firingRate
-edata.Update(exp, mouse, trials)
+# edata = elib.EphysEpoch().Load(exp, mouse, trials)
+# edata.firingRate = cell_firingRate
+# edata.Update(exp, mouse, trials)
 
 #%%
 def fix_spike_formats(Spike_sample_raw): #converts input into numpy array
@@ -59,7 +59,6 @@ def fix_spike_formats(Spike_sample_raw): #converts input into numpy array
 #         spike_train.append(spike_sample[inter] - interval[0]*sr)
         
 #     return spike_train
-
 
 def take_first_trials_out(spikes, interval, sr): #gets spikes from first epoch
     spike_train = []
@@ -147,13 +146,12 @@ plt.vlines(TTL_time, min(lineoffsets1), max(lineoffsets1), color='r')
 plt.show()
     
 #%% 
-
-trial_name = 'T13-15'    
+trial_name = 'T22-24'    
 Epoch = elib.EphysEpoch(trial=trial_name, t_TTL = TTL_time, t_spike_train = t_spike_train, 
                         spike_labels=cell_labels, sample_rate=sr, firingRate = cell_firingRate)
 
 #save the processed data
-path_data = r'F:\Spike Sorting\Data\3_Raster\2023-12-18_M103\\'
+path_data = r'F:\Spike Sorting\Data\3_Raster\2024-02-15_M105\\'
 file=open(path_data+f'{trial_name}.EphysEpoch', 'wb')
 pickle.dump(Epoch, file)
 file.close()
@@ -164,17 +162,84 @@ file.close()
 # file.close()
 
 #%% add TTL data to Ethovision mat files, only done once per mouse per experiment
-file = open(path_data+r'\offset_dict_M103.pydict', 'rb')
+file = open(path_data+r'\offset_dict_M105.pydict', 'rb')
 vid_offset = pickle.load(file)
 file.close()
 
-for trial in vid_offset.keys():
-    tdata = plib.TrialData()
-    tdata.Load('2023-12-18',103,trial)
+# for trial in vid_offset.keys():
+#     tedata = elib.EphysTrial()
+#     tedata.Load('2023-12-18',103,trial)
     
-    if hasattr(tdata, 'time_ttl'): #checks if ttl synch has already been calculated
-        pass
-    else:
-        tdata.time_ttl = tdata.time - vid_offset[tdata.trial] #synch video with TTL
-        tdata.Update()
+#     if hasattr(tdata, 'time_ttl'): #checks if ttl synch has already been calculated
+#         pass
+#     else:
+#         tdata.time_ttl = tdata.time - vid_offset[tdata.trial] #synch video with TTL
+#         tdata.Update()
     
+# create EphysTrial Mat files
+exp = '2024-02-15'
+mouse = 105
+trial = '24'
+
+t = plib.TrialData()
+t.Load(exp, mouse, trial)
+
+edata = elib.EphysEpoch().Load(exp, mouse,'T22-24')
+tr = 2 #is it trial 0, 1, 2 in the epoch?
+
+spike_sample_all = [edata.t_spike_train[i] - edata.t_TTL[tr][0] for i in range(len(edata.t_spike_train))] #synch all neuorns to ttl
+
+def crop_trains_to_trial(spike_trains, trialdata): #given synched spike trains & trial
+    spike_sample_trialcrop = []
+    for n in spike_trains:
+        k_spike_event = np.where((n > trialdata.time_ttl[0]) & (n < trialdata.time_ttl[-1])) #get 10 seconds before and after event
+        spike_sample_trialcrop.append(n[k_spike_event]) 
+    return spike_sample_trialcrop
+#%%
+e = elib.EphysTrial()
+e.exp = exp
+e.protocol_name=t.protocol_name
+e.protocol_description=t.protocol_description
+e.eth_file = t.eth_file
+e.bkgd_img=t.bkgd_img
+e.filename = ('hfmE_%s_M%s_%s.mat' %(t.exp, t.mouse_number, t.trial))
+
+e.img_extent=t.img_extent
+e.experimenter=t.experimenter
+e.mouse_number=t.mouse_number
+e.mouse_sex=t.mouse_sex
+e.day=t.day
+e.trial=t.trial
+e.entrance=t.entrance
+e.target=t.target
+if hasattr(t, 'target_reverse'): e.target_reverse=t.target_reverse
+e.time=t.time
+e.r_nose=t.r_nose
+e.r_center=t.r_center
+e.r_tail=t.r_tail
+
+if hasattr(t, 'velocity'): #checks if file has velocity info
+    e.velocity = t.velocity
+if hasattr(t, 'head_direction'): #checks if file has HD info
+    e.head_direction = t.head_direction
+e.r_arena_holes = t.r_arena_holes
+e.arena_circle = t.arena_circle
+e.k_reward = t.k_reward
+e.k_hole_checks = t.k_hole_checks
+
+e.time_ttl = t.time - vid_offset[t.trial] #synch video with TTL
+
+e.t_spikeTrains = crop_trains_to_trial(spike_sample_all, e)
+
+# e.spikeLabels = cell_labels
+# e.firingRate = cell_firingRate
+# e.sampleRate = sr
+
+e.cellLabels = np.asarray(edata.spike_labels)
+e.firingRate = np.asarray(edata.firingRate)
+e.sampleRate = edata.sample_rate
+
+e.Store()
+#%%
+e2 = elib.EphysTrial()
+e2.Load(exp, mouse, trial)
