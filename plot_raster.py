@@ -141,8 +141,8 @@ plt.show()
 '''NEW MAT FILE get spike sample of single neuron on a single trial'''
 exp = '2024-02-15'
 mouse = '105'
-trial = '24'
-neuron = 3
+trial = '16'
+neuron = 10
 
 (edata := elib.EphysTrial()).Load(exp, mouse, trial)
 
