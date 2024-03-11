@@ -139,16 +139,19 @@ plt.show()
 
 #%%
 '''NEW MAT FILE get spike sample of single neuron on a single trial'''
-exp = '2024-02-15'
-mouse = '105'
-trial = '16'
-neuron = 10
+exp = '2023-12-18'
+mouse = '102'
+trial = '15'
+neuron = 14
 
 (edata := elib.EphysTrial()).Load(exp, mouse, trial)
 
 print(edata.cellLabels[neuron])
 print(edata.firingRates[neuron])
-spike_sample = edata.t_spikeTrains[neuron]
+
+t_start = edata.time_ttl[np.isfinite(edata.r_center)[:,0]][0] #returns the first non-nan coordinate
+
+spike_sample = edata.t_spikeTrains[neuron] - t_start
 
 
 # test = np.where((edata.k_hole_checks[:,1] > 0) & (edata.k_hole_checks[:,1] < edata.k_reward)) 
@@ -156,14 +159,18 @@ spike_sample = edata.t_spikeTrains[neuron]
 '''plot raster of whole trial'''
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(16, 2))
 lineoffsets1 = range(1)
+
+
 ax.eventplot(spike_sample, lineoffsets=lineoffsets1, color='#5f0f40')
 
-t_hole_checks = np.sort(edata.time_ttl[edata.k_hole_checks[:,1]])
-plt.plot(t_hole_checks , np.zeros(t_hole_checks.shape),'o', color = '#F18701')
+#not callebrated to t_start yet
+# t_hole_checks = np.sort(edata.time_ttl[edata.k_hole_checks[:,1]])
+# plt.plot(t_hole_checks , np.zeros(t_hole_checks.shape),'o', color = '#F18701')
 
-plt.vlines(edata.time_ttl[edata.k_reward], min(lineoffsets1)-1, max(lineoffsets1)+1, color='g') #when did mouse find reward
-t_start = edata.time_ttl[np.isfinite(edata.r_center)[:,0]][0] #returns the first non-nan coordinate
-plt.vlines(t_start, min(lineoffsets1)-1, max(lineoffsets1)+1, color='k') #when did trial start
+
+plt.vlines(0, min(lineoffsets1)-1, max(lineoffsets1)+1, color='k') #when did trial start
+plt.vlines(edata.time_ttl[edata.k_reward]-t_start, min(lineoffsets1)-1, max(lineoffsets1)+1, color='g') #when did mouse find reward
+
 # plt.vlines(edata.time_ttl[923], min(lineoffsets1)-1, max(lineoffsets1)+1, color='b') #custom marker
 
 
@@ -179,10 +186,10 @@ plt.xlabel('Time (s)' , fontsize=20)
 plt.title(f'Cell {neuron}')
 ax.set_yticks([])
 ax.margins(0)
-plt.xlim((t_start-10,edata.time_ttl[edata.k_reward]+10))
+plt.xlim((-10,edata.time_ttl[edata.k_reward]-t_start+10))
 
-# path_data = rf'F:\Spike Sorting\Data\3_Raster\{exp}_M{mouse}'
-# plt.savefig(path_data+f'/figs/Raster_M{edata.mouse_number}_T{edata.trial}_Cell{neuron}.png', dpi=600, bbox_inches='tight', pad_inches = 0)
+path_data = rf'F:\Spike Sorting\Data\3_Raster\{exp}_M{mouse}'
+plt.savefig(path_data+f'/figs/Raster_M{edata.mouse_number}_T{edata.trial}_Cell{neuron}.png', dpi=600, bbox_inches='tight', pad_inches = 0)
 
 plt.show()
 #%%

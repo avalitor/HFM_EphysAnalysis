@@ -62,31 +62,61 @@ def make_heatmap(x, y, s=32, bins=1000):
     x = x[~np.isnan(x)]
     y = y[~np.isnan(y)]
     
-    heatmap, xedges, yedges = np.histogram2d(x, y, bins=bins)
+    heatmap, xedges, yedges = np.histogram2d(x, y, bins=bins, range=[[-65, 65], [-65, 65]])
     heatmap = gaussian_filter(heatmap, sigma=s)
     
     extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-    return heatmap.T, extent
+    
+    # x_bins = np.linspace(-65, 65, bins)
+    # y_bins = np.linspace(-65, 65, bins)
+    # extent = min(x_bins), max(x_bins), min(y_bins), max(y_bins)
+    # heatmap = np.zeros((bins, bins)) #create empty 2d array
+    
+    # for i in range(len(x)):
+    #     x_bin_index = np.digitize(x[i], x_bins) - 1 #Return the indices of the bins to which each value in input array belongs.
+    #     y_bin_index = np.digitize(y[i], y_bins) - 1 #minus one so it fits the original shape
+    #     heatmap[x_bin_index, y_bin_index] += 1
+    
+    return heatmap.T, extent #the T transposes the array so it is correctly orriented
 
 
 def occupancy_bins(edata, bins = 60):
    
     #occupancy (2D numpy array): time spent of the animal in each spatial bin.
     
-    x, y = edata.r_center[:,1], edata.r_center[:,0]
+    # x, y = edata.r_center[:,0], edata.r_center[:,1]
+    
+    filterd_coords = [] #use time index to get coords
+    for i, xs in enumerate(edata.time):
+        if edata.velocity[i-1]>2:
+            if i == len(edata.r_center): pass #avoids an out of index error
+            else:
+                filterd_coords.append([edata.r_center[i,0], edata.r_center[i,1]]) #don't offset this i
+    filterd_coords = np.array(filterd_coords)
+    x, y =filterd_coords[:,0],filterd_coords[:,1]
+    
     x = x[~np.isnan(x)]
     y = y[~np.isnan(y)]
-    samplingRate = edata.time[1] #how long each sample is
-    x_bins = np.linspace(np.nanmin(x), np.nanmax(x), bins) #get evenly spaced range of numbers
-    y_bins = np.linspace(np.nanmin(y), np.nanmax(y), bins)
-    occupancy = np.zeros((bins, bins)) #create empty 2d array
-    extent = min(x_bins), max(x_bins), min(y_bins), max(y_bins)
-    for i in range(len(x)):
-        x_bin_index = np.digitize(x[i], x_bins) - 1 #Return the indices of the bins to which each value in input array belongs.
-        y_bin_index = np.digitize(y[i], y_bins) - 1 #minus one so it fits the original shape
-        occupancy[x_bin_index, y_bin_index] += samplingRate
+    
+    
+    occupancy, xedges, yedges = np.histogram2d(x, y, bins=bins, range=[[-65, 65], [-65, 65]])
+    
+    extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+    
 
-    return occupancy, extent
+    # samplingRate = edata.time[1] #how long each sample is
+    # # x_bins = np.linspace(np.nanmin(x), np.nanmax(x), bins) #get evenly spaced range of numbers
+    # # y_bins = np.linspace(np.nanmin(y), np.nanmax(y), bins)
+    # x_bins = np.linspace(-65, 65, bins)
+    # y_bins = np.linspace(-65, 65, bins)
+    # occupancy = np.zeros((bins, bins)) #create empty 2d array
+    # extent = min(x_bins), max(x_bins), min(y_bins), max(y_bins)
+    # for i in range(len(x)):
+    #     x_bin_index = np.digitize(x[i], x_bins) - 1 #Return the indices of the bins to which each value in input array belongs.
+    #     y_bin_index = np.digitize(y[i], y_bins) - 1 #minus one so it fits the original shape
+    #     occupancy[x_bin_index, y_bin_index] += samplingRate
+
+    return occupancy.T, extent
 
 def draw_spike_heatmap(spike_coords, trial_coords, idx_end, ax, weighted = True):
     
@@ -107,11 +137,11 @@ def draw_spike_heatmap(spike_coords, trial_coords, idx_end, ax, weighted = True)
     # hm_trial_norm_inverse = 1-hm_trial_norm
     # hm_weighted = hm_spike_norm*hm_trial_norm_inverse
     
-    occupancy, _ = occupancy_bins(edata, bins)
-    hm_weighted = np.divide(hm_spike, occupancy, out=np.zeros_like(hm_spike), where=occupancy!=0)
     
-    hm_weighted = gaussian_filter(hm_weighted, sigma=2)
-    if weighted: img = hm_weighted
+    if weighted: 
+        occupancy, _ = occupancy_bins(edata, bins)
+        hm_weighted = np.divide(hm_spike, occupancy, out=np.zeros_like(hm_spike), where=occupancy!=0)
+        img = gaussian_filter(hm_weighted, sigma=2)
     else: img = gaussian_filter(hm_spike, sigma=2)
     
     colors = [(1,0,0,c) for c in np.linspace(0,1,100)]
@@ -140,10 +170,10 @@ def draw_traj_heatmap(coords, idx_end, ax):
     return ax
     
     
-def draw_arena(data, ax):
+def draw_arena(data, ax, color='k'):
     #draws arena
     Drawing_arena_circle = plt.Circle( (data.arena_circle[0], data.arena_circle[1]), 
-                                          data.arena_circle[2] , fill = False )
+                                          data.arena_circle[2] , fill = False, color=color )
     ax.add_artist( Drawing_arena_circle )
     
     #labels holes with numbers
@@ -152,7 +182,7 @@ def draw_arena(data, ax):
     #     ax.annotate(txt, (data.r_arena_holes[i]))
     
     for c in data.r_arena_holes:
-        small_hole = plt.Circle( (c[0], c[1] ), 0.5 , fill = False ,alpha=0.5)
+        small_hole = plt.Circle( (c[0], c[1] ), 0.5 , fill = False ,alpha=0.5, color = color)
         ax.add_artist( small_hole )
 
     ax.set_aspect('equal','box')
@@ -184,12 +214,12 @@ def plot_place_field(data, spike_sample, crop_at_target = True, savefig=False):
     if crop_at_target: idx_end = data.k_reward + 10 #75 = extra 3 seconds
     else: idx_end = len(data.time)
     
-    draw_arena(data, ax)
+    draw_arena(data, ax, color='white')
     # draw_hole_checks(data, idx_end, ax)
     # draw_spikes(data, spike_sample, idx_end, ax)
     
     
-    plt.plot(data.r_center[:idx_end,0], data.r_center[:idx_end,1], color='k', alpha=0.3) #plot path, alpha 0.3
+    # plt.plot(data.r_center[:idx_end,0], data.r_center[:idx_end,1], color='k', alpha=0.3) #plot path, alpha 0.3
     # ax.scatter(data.r_nose[:idx_target,0], data.r_nose[:idx_target,1], s=1.5, facecolors=colors_time_course(t_seq_traj[:idx_target])) #plot path with colours
     
     spike_coords = calc_spike_coords(data, spike_sample, idx_end, 2)
@@ -206,7 +236,7 @@ def plot_place_field(data, spike_sample, crop_at_target = True, savefig=False):
         else:
             first_coord = data.r_nose[i]
             break
-    entrance = plt.Rectangle((first_coord-3.5), 7, 7, fill=False, color='k', alpha=0.8, lw=3)
+    entrance = plt.Rectangle((first_coord-3.5), 7, 7, fill=False, color='white', alpha=0.8, lw=3)
     ax.add_artist(entrance)        
     
     if savefig == True:
@@ -235,21 +265,28 @@ def plot_place_field(data, spike_sample, crop_at_target = True, savefig=False):
 
 
 if __name__ == '__main__':
-    path_data =  r'F:\Spike Sorting\Data\3_Raster\2023-12-18_M102'
-    
+       
     exp = '2023-12-18'
     mouse = 102
-    trial = '13'
-    neuron = 2
+    trial = '14'
+    neuron = 14
+    
+    path_data =  rf'F:\Spike Sorting\Data\3_Raster\{exp}_M{mouse}'
     
     # (tdata := plib.TrialData()).Load(exp, mouse,'13')
     # edata = EphysEpoch().Load(exp, mouse,'T13-15')
     
     (edata := elib.EphysTrial()).Load(exp, mouse,trial)
-    spike_coords = edata.t_spikeTrains[neuron]
+    # spike_sample = edata.t_spikeTrains[neuron]
+    # spike_coords = calc_spike_coords(edata, spike_sample, len(edata.time), 2)
 
-    # test = make_heatmap(edata.r_center[:,0], edata.r_center[:,1], s=0, bins=60)
-    # occu = occupancy(edata, spike_coords)
+    # x = spike_coords[:, 0]
+    # y = spike_coords[:, 1]
+    # #plot heatmap
+    # bins = 60
+    # hm_spike2, extent2 = make_heatmap(x, y, s=0, bins=bins)
+    # occupancy, extent3 = occupancy_bins(edata, bins)
+    
     # spike_sample = edata.t_spike_train[neuron] - edata.t_TTL[0][0] #synch spike train with TTL REMEMBER TO CHOOSE CORRECT TTL
     # spikesample_crop = []#crop according to time_ttl
     print(edata.cellLabels[neuron])
@@ -261,4 +298,4 @@ if __name__ == '__main__':
     # k_times = tedata.k_hole_checks[tedata.k_hole_checks[:,1]<= tedata.k_reward+10]
     # plot_place_field(tdata, spike_sample, crop_at_target=True, savefig=False)
     
-    plot_place_field(edata, edata.t_spikeTrains[neuron], crop_at_target=False, savefig=False)
+    plot_place_field(edata, edata.t_spikeTrains[neuron], crop_at_target=False, savefig=True)

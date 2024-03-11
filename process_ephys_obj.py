@@ -162,7 +162,12 @@ file.close()
 # file.close()
 
 #%% add TTL data to Ethovision mat files, only done once per mouse per experiment
-file = open(path_data+r'\offset_dict_M105.pydict', 'rb')
+exp = '2023-12-18'
+mouse = "102"
+trial = 'Habituation 2'
+
+path_data = rf'F:\Spike Sorting\Data\3_Raster\{exp}_M{mouse}\\'
+file = open(path_data+rf'\offset_dict_M{mouse}.pydict', 'rb')
 vid_offset = pickle.load(file)
 file.close()
 
@@ -177,15 +182,13 @@ file.close()
 #         tdata.Update()
     
 # create EphysTrial Mat files
-exp = '2024-02-15'
-mouse = 105
-trial = '24'
+
 
 t = plib.TrialData()
 t.Load(exp, mouse, trial)
 
-edata = elib.EphysEpoch().Load(exp, mouse,'T22-24')
-tr = 2 #is it trial 0, 1, 2 in the epoch?
+edata = elib.EphysEpoch().Load(exp, mouse,'Habit2')
+tr = 0 #is it trial 0, 1, 2 in the epoch?
 
 spike_sample_all = [edata.t_spike_train[i] - edata.t_TTL[tr][0] for i in range(len(edata.t_spike_train))] #synch all neuorns to ttl
 
