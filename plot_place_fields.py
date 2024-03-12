@@ -16,13 +16,13 @@ import sys
 sys.path.append("F:\Spike Sorting\EthovisionPathAnalysis_HDF5")
 # import modules.lib_process_data_to_mat as plib
 from scipy.ndimage import gaussian_filter
-from scipy.stats import binned_statistic_2d
+# from scipy.stats import binned_statistic_2d
 
 #%%
 
-def get_vid_TTL_start_idx(tdata, vid_offset):
-    idx_start = np.searchsorted(tdata.time, vid_offset[tdata.trial])
-    return idx_start
+# def get_vid_TTL_start_idx(tdata, vid_offset):
+#     idx_start = np.searchsorted(tdata.time, vid_offset[tdata.trial])
+#     return idx_start
 
 def calc_spike_coords(tdata, spike_sample, idx_end, velocity_cutoff = 2):
     '''
@@ -77,15 +77,13 @@ def make_heatmap(x, y, s=32, bins=1000):
     #     y_bin_index = np.digitize(y[i], y_bins) - 1 #minus one so it fits the original shape
     #     heatmap[x_bin_index, y_bin_index] += 1
     
-    return heatmap.T, extent #the T transposes the array so it is correctly orriented
+    return heatmap.T, extent #the T transposes the array so it is correctly oriented
 
 
 def occupancy_bins(edata, bins = 60):
-   
-    #occupancy (2D numpy array): time spent of the animal in each spatial bin.
+    '''occupancy (2D numpy array): time spent of the animal in each spatial bin.'''
     
-    # x, y = edata.r_center[:,0], edata.r_center[:,1]
-    
+    #first, filter out low velocity coordinates
     filterd_coords = [] #use time index to get coords
     for i, xs in enumerate(edata.time):
         if edata.velocity[i-1]>2:
@@ -99,11 +97,10 @@ def occupancy_bins(edata, bins = 60):
     y = y[~np.isnan(y)]
     
     
-    occupancy, xedges, yedges = np.histogram2d(x, y, bins=bins, range=[[-65, 65], [-65, 65]])
-    
+    occupancy, xedges, yedges = np.histogram2d(x, y, bins=bins, range=[[-65, 65], [-65, 65]]) #this bins the data
     extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
     
-
+    #alternate way to bin, but it takes slower
     # samplingRate = edata.time[1] #how long each sample is
     # # x_bins = np.linspace(np.nanmin(x), np.nanmax(x), bins) #get evenly spaced range of numbers
     # # y_bins = np.linspace(np.nanmin(y), np.nanmax(y), bins)
@@ -127,18 +124,13 @@ def draw_spike_heatmap(spike_coords, trial_coords, idx_end, ax, weighted = True)
     bins = 60
     
     hm_spike, extent = make_heatmap(x, y, s=0, bins=bins)
-    # hm_spike_norm = (hm_spike-np.min(hm_spike))/(np.max(hm_spike)-np.min(hm_spike))
     
     x_t = trial_coords[:, 0]
     y_t = trial_coords[:, 1]
     hm_trial, extent = make_heatmap(x_t, y_t, s=0, bins=bins)
+       
     
-    # hm_trial_norm = (hm_trial-np.min(hm_trial))/(np.max(hm_trial)-np.min(hm_trial))
-    # hm_trial_norm_inverse = 1-hm_trial_norm
-    # hm_weighted = hm_spike_norm*hm_trial_norm_inverse
-    
-    
-    if weighted: 
+    if weighted: #divides spike heatmap by occupancy heatmap
         occupancy, _ = occupancy_bins(edata, bins)
         hm_weighted = np.divide(hm_spike, occupancy, out=np.zeros_like(hm_spike), where=occupancy!=0)
         img = gaussian_filter(hm_weighted, sigma=2)
@@ -199,7 +191,6 @@ def draw_hole_checks(data, idx_end, ax):
     colors_time_course = plt.get_cmap('cool') # plt.get_cmap('cool') #jet_r
     t_seq_hole = data.time[k_times[:,1]]/data.time[data.k_reward-1]
     # t_seq_traj = data.time/data.time[data.k_reward-1]
-        
     
     #plots hole checks
     ax.scatter(data.r_arena_holes[k_times[:,0]][:,0], data.r_arena_holes[k_times[:,0]][:,1], 
@@ -219,7 +210,7 @@ def plot_place_field(data, spike_sample, crop_at_target = True, savefig=False):
     # draw_spikes(data, spike_sample, idx_end, ax)
     
     
-    # plt.plot(data.r_center[:idx_end,0], data.r_center[:idx_end,1], color='k', alpha=0.3) #plot path, alpha 0.3
+    plt.plot(data.r_center[:idx_end,0], data.r_center[:idx_end,1], color='k', alpha=0.3) #plot path, alpha 0.3
     # ax.scatter(data.r_nose[:idx_target,0], data.r_nose[:idx_target,1], s=1.5, facecolors=colors_time_course(t_seq_traj[:idx_target])) #plot path with colours
     
     spike_coords = calc_spike_coords(data, spike_sample, idx_end, 2)
@@ -243,22 +234,6 @@ def plot_place_field(data, spike_sample, crop_at_target = True, savefig=False):
         plt.savefig(path_data+f'/figs/Placefield_M{data.mouse_number}_T{data.trial}_Cell{neuron}.png', dpi=600, bbox_inches='tight', pad_inches = 0)
     
     plt.show()
-    
-# def load_tdata(path_data, trial, recalc = False): #obsolete, moved to processing step
-#     tdata = plib.TrialData()
-#     tdata.Load('2023-10-16',101,trial)
-    
-#     file = open(path_data+r'\offset_dict.pydict', 'rb')
-#     vid_offset = pickle.load(file)
-#     file.close()
-    
-#     if hasattr(tdata, 'time_ttl') and recalc == False: #checks if ttl synch has already been calculated and we don't want to recalculate
-#         pass
-#     else:
-#         tdata.time_ttl = tdata.time - vid_offset[tdata.trial] #synch video with TTL
-#         tdata.Update()
-    
-#     return tdata
 
 #%%
 
@@ -268,8 +243,8 @@ if __name__ == '__main__':
        
     exp = '2023-12-18'
     mouse = 102
-    trial = '14'
-    neuron = 14
+    trial = 'Probe'
+    neuron = 13
     
     path_data =  rf'F:\Spike Sorting\Data\3_Raster\{exp}_M{mouse}'
     
@@ -298,4 +273,4 @@ if __name__ == '__main__':
     # k_times = tedata.k_hole_checks[tedata.k_hole_checks[:,1]<= tedata.k_reward+10]
     # plot_place_field(tdata, spike_sample, crop_at_target=True, savefig=False)
     
-    plot_place_field(edata, edata.t_spikeTrains[neuron], crop_at_target=False, savefig=True)
+    plot_place_field(edata, edata.t_spikeTrains[neuron], crop_at_target=False, savefig=False)

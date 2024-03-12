@@ -139,10 +139,15 @@ plt.show()
 
 #%%
 '''NEW MAT FILE get spike sample of single neuron on a single trial'''
+# exp = '2024-02-15'
+# mouse = '105'
+# trial = '19'
+# neuron = 11
+
 exp = '2023-12-18'
 mouse = '102'
-trial = '15'
-neuron = 14
+trial = '18'
+neuron = 3
 
 (edata := elib.EphysTrial()).Load(exp, mouse, trial)
 
@@ -186,10 +191,10 @@ plt.xlabel('Time (s)' , fontsize=20)
 plt.title(f'Cell {neuron}')
 ax.set_yticks([])
 ax.margins(0)
-plt.xlim((-10,edata.time_ttl[edata.k_reward]-t_start+10))
+plt.xlim((-20,edata.time_ttl[edata.k_reward]-t_start+10))
 
-path_data = rf'F:\Spike Sorting\Data\3_Raster\{exp}_M{mouse}'
-plt.savefig(path_data+f'/figs/Raster_M{edata.mouse_number}_T{edata.trial}_Cell{neuron}.png', dpi=600, bbox_inches='tight', pad_inches = 0)
+# path_data = rf'F:\Spike Sorting\Data\3_Raster\{exp}_M{mouse}'
+# plt.savefig(path_data+f'/figs/Raster_M{edata.mouse_number}_T{edata.trial}_Cell{neuron}.png', dpi=600, bbox_inches='tight', pad_inches = 0)
 
 plt.show()
 #%%
@@ -197,7 +202,7 @@ plt.show()
 exp = '2024-02-15'
 mouse = '105'
 trial = '24'
-neuron = 3
+neuron = 1
 
 (edata := elib.EphysTrial()).Load(exp, mouse, trial)
 
@@ -205,6 +210,8 @@ print(edata.cellLabels[neuron])
 print(edata.firingRates[neuron])
 spike_train = edata.t_spikeTrains[neuron]
 event_list = edata.k_hole_checks[np.where(edata.k_hole_checks[:,0] == 51)][:,1] #get list of hole checks at reward hole
+
+event_list = np.delete(event_list, np.argwhere(np.ediff1d(event_list) <= 50) + 1) # gets rid of values too close to each other
 
 spike_sample_eventcrop = get_intertrial_event_crop(spike_train, event_list, edata)
 
