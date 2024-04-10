@@ -134,6 +134,7 @@ def draw_spike_heatmap(spike_coords, trial_coords, idx_end, ax, weighted = True)
         occupancy, _ = occupancy_bins(edata, bins)
         hm_weighted = np.divide(hm_spike, occupancy, out=np.zeros_like(hm_spike), where=occupancy!=0)
         img = gaussian_filter(hm_weighted, sigma=2)
+        # img = hm_weighted
     else: img = gaussian_filter(hm_spike, sigma=2)
     
     colors = [(1,0,0,c) for c in np.linspace(0,1,100)]
@@ -210,7 +211,7 @@ def plot_place_field(data, spike_sample, crop_at_target = True, savefig=False):
     # draw_spikes(data, spike_sample, idx_end, ax)
     
     
-    plt.plot(data.r_center[:idx_end,0], data.r_center[:idx_end,1], color='k', alpha=0.3) #plot path, alpha 0.3
+    # plt.plot(data.r_center[:idx_end,0], data.r_center[:idx_end,1], color='k', alpha=0.3) #plot path, alpha 0.3
     # ax.scatter(data.r_nose[:idx_target,0], data.r_nose[:idx_target,1], s=1.5, facecolors=colors_time_course(t_seq_traj[:idx_target])) #plot path with colours
     
     spike_coords = calc_spike_coords(data, spike_sample, idx_end, 2)
@@ -228,7 +229,8 @@ def plot_place_field(data, spike_sample, crop_at_target = True, savefig=False):
             first_coord = data.r_nose[i]
             break
     entrance = plt.Rectangle((first_coord-3.5), 7, 7, fill=False, color='white', alpha=0.8, lw=3)
-    ax.add_artist(entrance)        
+    ax.add_artist(entrance)       
+    plt.title(f'Cell {neuron}, FR: {round(data.firingRate[neuron], 2)}')
     
     if savefig == True:
         plt.savefig(path_data+f'/figs/Placefield_M{data.mouse_number}_T{data.trial}_Cell{neuron}.png', dpi=600, bbox_inches='tight', pad_inches = 0)
@@ -236,6 +238,14 @@ def plot_place_field(data, spike_sample, crop_at_target = True, savefig=False):
     plt.show()
 
 #%%
+    # (tdata := plib.TrialData()).Load(exp, mouse,'13')
+    # edata = EphysEpoch().Load(exp, mouse,'T13-15')
+    # spike_sample = edata.t_spike_train[neuron] - edata.t_TTL[0][0] #synch spike train with TTL REMEMBER TO CHOOSE CORRECT TTL
+    # assert len(spike_sample) > 0
+    # spikesample_crop = []#crop according to time_ttl
+    # spikecoords = calc_spike_coords(tedata, tedata.t_spikeTrains[14], tedata.k_reward)
+    # plot_place_field(tdata, spike_sample, crop_at_target=True, savefig=False)
+    # k_times = tedata.k_hole_checks[tedata.k_hole_checks[:,1]<= tedata.k_reward+10]
 
 
 
@@ -243,34 +253,25 @@ if __name__ == '__main__':
        
     exp = '2023-12-18'
     mouse = 102
-    trial = 'Probe'
-    neuron = 13
+    trial = 'Habituation 2'
+    neuron = 0
     
     path_data =  rf'F:\Spike Sorting\Data\3_Raster\{exp}_M{mouse}'
     
-    # (tdata := plib.TrialData()).Load(exp, mouse,'13')
-    # edata = EphysEpoch().Load(exp, mouse,'T13-15')
     
-    (edata := elib.EphysTrial()).Load(exp, mouse,trial)
-    # spike_sample = edata.t_spikeTrains[neuron]
-    # spike_coords = calc_spike_coords(edata, spike_sample, len(edata.time), 2)
+    edata = elib.EphysTrial.Load(exp, mouse,trial)
+    spike_sample = edata.t_spikeTrains[neuron]
+    spike_coords = calc_spike_coords(edata, spike_sample, len(edata.time), 2)
 
     # x = spike_coords[:, 0]
     # y = spike_coords[:, 1]
     # #plot heatmap
-    # bins = 60
-    # hm_spike2, extent2 = make_heatmap(x, y, s=0, bins=bins)
-    # occupancy, extent3 = occupancy_bins(edata, bins)
+    # hm_spike, extent = make_heatmap(x, y, s=0, bins=60)
+    # occupancy, extent2 = occupancy_bins(edata, bins=60)
     
-    # spike_sample = edata.t_spike_train[neuron] - edata.t_TTL[0][0] #synch spike train with TTL REMEMBER TO CHOOSE CORRECT TTL
-    # spikesample_crop = []#crop according to time_ttl
+
     print(edata.cellLabels[neuron])
-    print(edata.firingRates[neuron])
-    # assert len(spike_sample) > 0
+    print(edata.firingRate[neuron])
     
-    # spikecoords = calc_spike_coords(tedata, tedata.t_spikeTrains[14], tedata.k_reward)
-    
-    # k_times = tedata.k_hole_checks[tedata.k_hole_checks[:,1]<= tedata.k_reward+10]
-    # plot_place_field(tdata, spike_sample, crop_at_target=True, savefig=False)
     
     plot_place_field(edata, edata.t_spikeTrains[neuron], crop_at_target=False, savefig=False)
