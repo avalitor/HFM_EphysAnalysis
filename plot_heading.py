@@ -37,9 +37,9 @@ def heading_from_idx(tdata, idx_spike):
     return spike_heading
     
 
-(data := elib.EphysTrial()).Load('2024-02-15', '105', 'Probe')
+(data := elib.EphysTrial()).Load('2023-12-18', '102', 'Probe')
 
-neuron = 11
+neuron = 24
 
 spike_train = data.t_spikeTrains[neuron]
 idx_end = len(data.time)

@@ -57,20 +57,70 @@ class EphysEpoch(object):
         pickle.dump(self, file)
         file.close()
         
-
+class EphysTrial:
+    def __init__(self):
+        pass
+    
+    def Store(self): #stores all experimental data and metadata as a mat file
+        save_path = os.path.join(cfg.PROCESSED_FILE_DIR, self.exp, self.filename)
         
+        #creates experiment directory if it does not already exist
+        if not os.path.exists(os.path.dirname(save_path)):
+            os.mkdir(os.path.dirname(save_path))
+        #checks if save file already exists
+        if os.path.exists(save_path):
+            raise IOError(f'File {self.filename} already exists.')
+        
+        #create mat file here
+        scipy.io.savemat(save_path,self.__dict__,long_field_names=True)
+        
+    @classmethod
+    def Load(cls, exp, mouse, trial):
+        try: path = glob.glob(glob.glob(cfg.PROCESSED_FILE_DIR+'/'+exp+'/')[0]+'*M%s_%s.mat'%(mouse, trial), 
+                         recursive = True)[0] #finds file path based on ethovision trial number
+        except: raise ValueError('The specified file does not exist ::: %s Mouse %s Trial %s'%(exp,mouse,trial))
+        # Load MATLAB file
+        mat_data = scipy.io.loadmat(path)
+        #Create an instance of the class
+        obj = cls()
+        # Assign attributes dynamically based on the keys of mat_data
+        for key in mat_data:
+            if key.startswith('__'): pass
+            elif key == 't_spikeTrains':
+                setattr(obj, key, [np.squeeze(sp) for sp in mat_data['t_spikeTrains'][0].tolist()])
+            else:
+                if mat_data[key].shape == (1,1):
+                    setattr(obj, key, mat_data[key][0][0])
+                elif key.startswith('r_') or key == 'k_hole_checks':
+                    setattr(obj, key, mat_data[key])
+                else:
+                    setattr(obj, key, mat_data[key][0])
+        
+        return obj
+    
+    def Update(self):
+        save_path = os.path.join(cfg.PROCESSED_FILE_DIR, self.exp, self.filename)
+        
+        #checks if save file already exists
+        if not os.path.exists(save_path):
+            raise IOError(f'File {self.filename} does not exist.')
+            
+        #update mat file here
+        scipy.io.savemat(save_path,self.__dict__,long_field_names=True)
+
+'''
 class EphysTrial(TrialData):
     def __init__(self, exp='', protocol_name='', protocol_description='',
                     eth_file=[], bkgd_img='', img_extent=[], experimenter='',
                     mouse_number='', mouse_sex = '', day='', trial='', entrance='', target=[],
                     time=[], r_nose=[], r_center=[], r_tail=[], filename='', 
-                    spikeTrains=[], cellLabels=[], firingRates=[], sampleRate=[]):
+                    spikeTrains=[], cellLabels=[], firingRate=[], sampleRate=[]):
       super().__init__(exp, protocol_name, protocol_description, eth_file, 
                        bkgd_img, img_extent, experimenter, mouse_number, mouse_sex, 
                        day, trial, entrance, target, time, r_nose, r_center, r_tail, filename)
       self.t_spikeTrains = spikeTrains
       self.cellLabels = cellLabels
-      self.firingRates = firingRates
+      self.firingRate = firingRate
       self.sampleRate = sampleRate
     
     def Store(self): #stores all experimental data and metadata as a mat file
@@ -97,7 +147,7 @@ class EphysTrial(TrialData):
             self.time_ttl = m['time_ttl'][0]
         self.t_spikeTrains = [np.squeeze(sp) for sp in m['t_spikeTrains'][0].tolist()]
         self.cellLabels = m['cellLabels'][0]
-        self.firingRates = m['firingRate'][0]
+        self.firingRate = m['firingRate'][0]
         self.sampleRate = m['sampleRate'][0][0]
         
     # def Load(self, exp, mouse, trial): #loads mat file
@@ -144,7 +194,7 @@ class EphysTrial(TrialData):
     #     # self.t_spikeTrain =  m['t_spikeTrain'][0].tolist()
     #     self.t_spikeTrains = [np.squeeze(sp) for sp in m['t_spikeTrain'][0].tolist()]
     #     self.cellLabels = m['cellLabels'][0]
-    #     self.firingRates = m['firingRate'][0]
+    #     self.firingRate = m['firingRate'][0]
     #     self.sampleRate = m['sampleRate'][0][0]
         
     def Update(self):
@@ -156,4 +206,26 @@ class EphysTrial(TrialData):
             
         #update mat file here
         scipy.io.savemat(save_path,self.__dict__,long_field_names=True)
-            
+'''        
+
+# def delete_key_from_mat_file(input_file, key_to_delete):
+#     # Load MATLAB file
+#     mat_data = scipy.io.loadmat(input_file)
+
+#     # Check if the key exists
+#     if key_to_delete in mat_data:
+#         # Delete the key
+#         del mat_data[key_to_delete]
+#         print(f"Key '{key_to_delete}' deleted from the MATLAB file.")
+#     else:
+#         print(f"Key '{key_to_delete}' does not exist in the MATLAB file.")
+
+#     # Save modified data to a new MATLAB file
+#     scipy.io.savemat(input_file, mat_data)
+
+# MATLAB_FILE_DIR = r'C:\Users\Kelly\PythonGraphingProjects\GitProject\HFM_EphysAnalysis\data\processedData'
+# exp = '2023-10-16'
+# for files in os.listdir(os.path.join(MATLAB_FILE_DIR, exp)):
+#     delete_key_from_mat_file(MATLAB_FILE_DIR+'/'+exp+'/'+files, 'firingRates')
+# path = MATLAB_FILE_DIR+'/'+exp+'/'+'hfmE_2024-02-15_M105_14.mat'
+# mat_data = scipy.io.loadmat(path)   
