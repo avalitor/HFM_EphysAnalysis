@@ -236,6 +236,45 @@ def plot_place_field(data, spike_sample, crop_at_target = True, savefig=False):
         plt.savefig(path_data+f'/figs/Placefield_M{data.mouse_number}_T{data.trial}_Cell{neuron}.png', dpi=600, bbox_inches='tight', pad_inches = 0)
     
     plt.show()
+    
+def plot_traj_hole_checks(data, spike_sample, crop_at_target = True, savefig=False):
+
+    fig, ax = plt.subplots()
+    
+    if crop_at_target: idx_end = data.k_reward + 10 #75 = extra 3 seconds
+    else: idx_end = len(data.time)
+    
+    draw_arena(data, ax, color='k')
+    draw_hole_checks(data, idx_end, ax)
+    draw_spikes(data, spike_sample, idx_end, ax)
+    
+    
+    plt.plot(data.r_center[:idx_end,0], data.r_center[:idx_end,1], color='k', alpha=0.3) #plot path, alpha 0.3
+    # ax.scatter(data.r_nose[:idx_target,0], data.r_nose[:idx_target,1], s=1.5, facecolors=colors_time_course(t_seq_traj[:idx_target])) #plot path with colours
+    
+    # spike_coords = calc_spike_coords(data, spike_sample, idx_end, 2)
+    # draw_spike_heatmap(spike_coords, data.r_center, idx_end, ax, weighted=True)
+    # draw_traj_heatmap(data.r_center, idx_end, ax)
+    
+    # draw target
+    target = plt.Circle((data.target), 2.5 , color='g', alpha=1)
+    ax.add_artist(target)
+
+    #draw entrance
+    for i, _ in enumerate(data.r_nose):
+        if np.isnan(data.r_nose[i][0]): continue
+        else:
+            first_coord = data.r_nose[i]
+            break
+    entrance = plt.Rectangle((first_coord-3.5), 7, 7, fill=False, color='white', alpha=0.8, lw=3)
+    ax.add_artist(entrance)       
+    plt.title(f'Cell {neuron}, FR: {round(data.firingRate[neuron], 2)}')
+    
+    if savefig == True:
+        plt.savefig(path_data+f'/figs/Placefield_M{data.mouse_number}_T{data.trial}_Cell{neuron}.png', dpi=600, bbox_inches='tight', pad_inches = 0)
+    
+    plt.show()
+    
 
 #%%
     # (tdata := plib.TrialData()).Load(exp, mouse,'13')
@@ -251,9 +290,9 @@ def plot_place_field(data, spike_sample, crop_at_target = True, savefig=False):
 
 if __name__ == '__main__':
        
-    exp = '2023-12-18'
-    mouse = 102
-    trial = 'Habituation 2'
+    exp = '2024-02-15'
+    mouse = 105
+    trial = 'Probe'
     neuron = 0
     
     path_data =  rf'F:\Spike Sorting\Data\3_Raster\{exp}_M{mouse}'
@@ -275,3 +314,4 @@ if __name__ == '__main__':
     
     
     plot_place_field(edata, edata.t_spikeTrains[neuron], crop_at_target=False, savefig=False)
+    # plot_traj_hole_checks(edata, edata.t_spikeTrains[neuron], crop_at_target=False, savefig=False)

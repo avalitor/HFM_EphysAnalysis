@@ -144,19 +144,19 @@ plt.show()
 # trial = '19'
 # neuron = 11
 
-exp = '2023-12-18'
-mouse = '102'
-trial = '18'
-neuron = 3
+exp = '2024-02-15'
+mouse = '105'
+trial = '7'
+neuron = 12
 
-(edata := elib.EphysTrial()).Load(exp, mouse, trial)
+edata = elib.EphysTrial.Load(exp, mouse,trial)
 
 print(edata.cellLabels[neuron])
-print(edata.firingRates[neuron])
+print(edata.firingRate[neuron])
 
 t_start = edata.time_ttl[np.isfinite(edata.r_center)[:,0]][0] #returns the first non-nan coordinate
 
-spike_sample = edata.t_spikeTrains[neuron] - t_start
+spike_sample = edata.t_spikeTrains[neuron]-t_start
 
 
 # test = np.where((edata.k_hole_checks[:,1] > 0) & (edata.k_hole_checks[:,1] < edata.k_reward)) 

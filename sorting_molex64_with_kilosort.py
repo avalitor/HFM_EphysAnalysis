@@ -34,7 +34,7 @@ pprint(ss.installed_sorters()) #confirms that the sorter is loaded
 
 #%%
 '''load a single file'''
-multirecording = se.BinaryRecordingExtractor(r'F:\Spike Sorting\Data\1_RawDats\2023-10-16_M101\Day6_Probe-T19-20\N12 Probe1_Base NoTurn_231021_134626\amplifier.dat', 30000,64,'int16')
+multirecording = se.BinaryRecordingExtractor(r'F:\Spike Sorting\Data\1_RawDats\M108_loweringelectrode\M108_Day6_Turn14_240708_154529\amplifier.dat', 30000,64,'int16')
 multirecording
 
 #%%
@@ -58,7 +58,7 @@ recording_list = []
 sampling_frequency = 30000
 num_channels = 64
 rawDatPath = r'F:\Spike Sorting\Data\1_RawDats'
-dayPath = r'\2024-02-15_M105\Day7_Probe-T19-24'
+dayPath = r'\2024-02-15_M105\Day4_T1-7'
 path = rawDatPath + dayPath
 c=0
 for (root, dirs, files) in os.walk(path):
@@ -111,7 +111,7 @@ else:
 # recording_list
 
 
-#%% Manual selection
+#%% Manual file selection
 channel_ids = np.arange(128)
 sampling_frequency = 30000
 
@@ -119,17 +119,18 @@ sampling_frequency = 30000
 # path_base = r'F:\Spike Sorting\Data\1_RawDats\2024-02-15_M105\Day3_Habit1-Habit2\M104-105_baseline_afterT15-Habit1_240217_151422\amplifier.dat'
 # path2 = r'F:\Spike Sorting\Data\1_RawDats\2024-02-12_M104\Day6_T13-18\M104_T16-18_240217_193947\amplifier.dat'
 
-path1 = r'F:\Spike Sorting\Data\1_RawDats\2024-02-12_M104\Day6_T13-18\M104_T13-15_240217_140548\amplifier.dat'
-path_base = r'F:\Spike Sorting\Data\1_RawDats\2024-02-15_M105\Day3_Habit1-Habit2\M104-105_baseline_afterT15-Habit1_240217_151422\amplifier.dat'
-path2 = r'F:\Spike Sorting\Data\1_RawDats\2024-02-12_M104\Day6_T13-18\M104_T16-18_240217_193947\amplifier.dat'
+path1 = r'F:\Spike Sorting\Data\1_RawDats\2024-02-15_M105\Day4_T1-7\M105_T1-3_240218_144827\amplifier.dat'
+path_base = r'F:\Spike Sorting\Data\1_RawDats\2024-02-15_M105\Day4_T1-7\M105_baseline_240218_151918\amplifier.dat'
+path2 = r'F:\Spike Sorting\Data\1_RawDats\2024-02-15_M105\Day4_T1-7\M105_T4-6_240218_183212\amplifier.dat'
+path3 = r'F:\Spike Sorting\Data\1_RawDats\2024-02-15_M105\Day4_T1-7\M105_T7probe_240218_185448\amplifier.dat'
 
 trial_list1 = se.BinaryRecordingExtractor(path1,sampling_frequency,64,'int16')
 baseline_recording = se.BinaryRecordingExtractor(path_base,sampling_frequency,128,'int16')
-baseline_recording = baseline_recording.channel_slice(channel_ids=channel_ids[:64])
+baseline_recording = baseline_recording.channel_slice(channel_ids=channel_ids[64:], renamed_channel_ids= channel_ids[:64])
 trial_list2 = se.BinaryRecordingExtractor(path2,sampling_frequency,64,'int16')
+trial3 = se.BinaryRecordingExtractor(path3,sampling_frequency,64,'int16')
 
-recording_list = [trial_list1, baseline_recording, trial_list2]
-#%%
+recording_list = [trial_list1, baseline_recording, trial_list2, trial3]
 
 multirecording = si.concatenate_recordings(recording_list)
 multirecording
@@ -169,6 +170,6 @@ default_TDC_params = ss.Kilosort2Sorter.default_params()
 default_TDC_params['projection_threshold'] = [9, 9]
 print(default_TDC_params)
 
-
-sorting_TDC_5 = ss.run_sorter("kilosort2", recording=multirecording, output_folder=r'F:\Spike Sorting\Data\2_Kilosorted'+dayPath+'\\'+mouse+'\\recording')
+# sorting_TDC_5 = ss.run_sorter("kilosort2", recording=multirecording, output_folder=r'F:\Spike Sorting\Data\2_Kilosorted2.5\M108_loweringelectrode\M108_Day6_Turn14_240708_154529\recording')
+sorting_TDC_5 = ss.run_sorter("kilosort2", recording=multirecording, output_folder=r'F:\Spike Sorting\Data\2_Kilosorted2.5'+dayPath+'\\'+mouse+'\\recording')
 sorting_TDC_5.get_unit_ids()

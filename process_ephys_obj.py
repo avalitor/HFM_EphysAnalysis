@@ -23,7 +23,7 @@ import modules.lib_process_data_to_mat as plib
 
 #%%
 epoch = 2
-path_m = r'H:\Phy\2024-02-15_M105\Day7_Probe-T19-24\M105\recording'
+path_m = r'H:\Phy\2024-02-15_M105\Day7_Probe-T20-24\M105\recording'
 
 TTL_in = sio.loadmat(path_m + '\TTL_in-T22-24.mat')['v'] #TTL Pulse
 
@@ -78,6 +78,15 @@ def take_last_trials_out(spikes, interval, sr): #get spikes from last epoch
         spike_train.append(spike_sample[inter] - interval[-1]*sr)
     return spike_train
 
+def take_last_trials_out_trial7(spikes, interval, sr): #get spikes from last epoch
+    spike_train = []
+    for st in range(len(spikes['ts'][0][0][0])):
+        spike_sample = fix_spike_formats(spikes['ts'][0][0][0][st])
+        inter = np.where(spike_sample >= 8566.285*sr) #get start of last interval
+        assert len(spike_sample) > len(spike_sample[inter])
+        spike_train.append(spike_sample[inter] - 8566.285*sr) #8566.285*sr
+    return spike_train
+
 def TTL_extr(input): #for digital TTL
     start_tray = []
     end_tray   = []
@@ -106,7 +115,7 @@ def extract_analog_TTL(raw_TTL): #for analog TTL
             output.append(np.array([start[i], end[i]]))
     return np.array(output)
 
-#%%
+
 sr = 30000
 
 if epoch == 1: 
@@ -161,19 +170,20 @@ file.close()
 # test = pickle.load(file)
 # file.close()
 
-#%% add TTL data to Ethovision mat files, only done once per mouse per experiment
-exp = '2023-12-18'
-mouse = "102"
-trial = 'Habituation 2'
+#%% 
+exp = '2024-02-15'
+mouse = "105"
+trial = '24'
 
 path_data = rf'F:\Spike Sorting\Data\3_Raster\{exp}_M{mouse}\\'
 file = open(path_data+rf'\offset_dict_M{mouse}.pydict', 'rb')
 vid_offset = pickle.load(file)
 file.close()
 
+# add TTL time to mat files. only need to be done once per experiment
 # for trial in vid_offset.keys():
 #     tedata = elib.EphysTrial()
-#     tedata.Load('2023-12-18',103,trial)
+#     tedata.Load('2023-12-18', 103, trial)
     
 #     if hasattr(tdata, 'time_ttl'): #checks if ttl synch has already been calculated
 #         pass
@@ -182,23 +192,21 @@ file.close()
 #         tdata.Update()
     
 # create EphysTrial Mat files
-
-
 t = plib.TrialData()
 t.Load(exp, mouse, trial)
 
-edata = elib.EphysEpoch().Load(exp, mouse,'Habit2')
-tr = 0 #is it trial 0, 1, 2 in the epoch?
+edata = elib.EphysEpoch().Load(exp, mouse, trial_name)
+tr = 2 #is it trial 0, 1, 2 in the epoch?
 
 spike_sample_all = [edata.t_spike_train[i] - edata.t_TTL[tr][0] for i in range(len(edata.t_spike_train))] #synch all neuorns to ttl
 
 def crop_trains_to_trial(spike_trains, trialdata): #given synched spike trains & trial
     spike_sample_trialcrop = []
     for n in spike_trains:
-        k_spike_event = np.where((n > trialdata.time_ttl[0]) & (n < trialdata.time_ttl[-1])) #get 10 seconds before and after event
+        k_spike_event = np.where((n > trialdata.time_ttl[0]) & (n < trialdata.time_ttl[-1])) #get spikes in between trial start and end time
         spike_sample_trialcrop.append(n[k_spike_event]) 
     return spike_sample_trialcrop
-#%%
+
 e = elib.EphysTrial()
 e.exp = exp
 e.protocol_name=t.protocol_name
