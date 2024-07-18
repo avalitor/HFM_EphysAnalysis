@@ -9,7 +9,6 @@ change MATLAB_FILE_DIR to where you stored all the experiment files
 import scipy.io
 import glob
 import numpy as np
-import os
 
 class EphysTrial:
     def __init__(self):
