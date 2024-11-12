@@ -233,6 +233,7 @@ if hasattr(t, 'velocity'): #checks if file has velocity info
     e.velocity = t.velocity
 if hasattr(t, 'head_direction'): #checks if file has HD info
     e.head_direction = t.head_direction
+e.heading = t.heading
 e.r_arena_holes = t.r_arena_holes
 e.arena_circle = t.arena_circle
 e.k_reward = t.k_reward
@@ -241,6 +242,8 @@ e.k_hole_checks = t.k_hole_checks
 e.time_ttl = t.time - vid_offset[t.trial] #synch video with TTL
 
 e.t_spikeTrains = crop_trains_to_trial(spike_sample_all, e)
+
+test = crop_trains_to_trial(spike_sample_all, e)
 
 # e.spikeLabels = cell_labels
 # e.firingRate = cell_firingRate
@@ -252,5 +255,12 @@ e.sampleRate = edata.sample_rate
 
 e.Store()
 #%%
+exp = '2024-02-15'
+mouse = "105"
+trial = '24'
+
+t = plib.TrialData()
+t.Load(exp, mouse, trial)
+
 e2 = elib.EphysTrial()
 e2.Load(exp, mouse, trial)

@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import lib_ephys_obj as elib
 import modules.lib_process_data_to_mat as plib
+import config as cg
 
 
 def get_trial_event_crop(spike_trains, trialdata): #given synched spike trains & trial
@@ -132,32 +133,26 @@ ax.set_yticks([])
 ax.margins(0)
 plt.xlim((t_start-10,e.time_ttl[tdata.k_reward]+10))
 
-# path_data = rf'F:\Spike Sorting\Data\3_Raster\{exp}_M{mouse}'
+# path_data = cg.ROOT_DIR
 # plt.savefig(path_data+f'/figs/Raster_M{tdata.mouse_number}_T{tdata.trial}_Cell{neuron}.png', dpi=600, bbox_inches='tight', pad_inches = 0)
 
 plt.show()
 
 #%%
 '''NEW MAT FILE get spike sample of single neuron on a single trial'''
-# exp = '2024-02-15'
-# mouse = '105'
-# trial = '19'
-# neuron = 11
-
 exp = '2024-02-15'
 mouse = '105'
-trial = '7'
-neuron = 12
-
+trial = '19'
+neuron = 13
 edata = elib.EphysTrial.Load(exp, mouse,trial)
 
 print(edata.cellLabels[neuron])
 print(edata.firingRate[neuron])
 
 t_start = edata.time_ttl[np.isfinite(edata.r_center)[:,0]][0] #returns the first non-nan coordinate
+t_reward = edata.time_ttl[edata.k_reward]-t_start #this is relative to a t_start=0
 
 spike_sample = edata.t_spikeTrains[neuron]-t_start
-
 
 # test = np.where((edata.k_hole_checks[:,1] > 0) & (edata.k_hole_checks[:,1] < edata.k_reward)) 
 
@@ -165,19 +160,16 @@ spike_sample = edata.t_spikeTrains[neuron]-t_start
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(16, 2))
 lineoffsets1 = range(1)
 
-
 ax.eventplot(spike_sample, lineoffsets=lineoffsets1, color='#5f0f40')
 
 #not callebrated to t_start yet
 # t_hole_checks = np.sort(edata.time_ttl[edata.k_hole_checks[:,1]])
 # plt.plot(t_hole_checks , np.zeros(t_hole_checks.shape),'o', color = '#F18701')
 
-
 plt.vlines(0, min(lineoffsets1)-1, max(lineoffsets1)+1, color='k') #when did trial start
-plt.vlines(edata.time_ttl[edata.k_reward]-t_start, min(lineoffsets1)-1, max(lineoffsets1)+1, color='g') #when did mouse find reward
+plt.vlines(t_reward, min(lineoffsets1)-1, max(lineoffsets1)+1, color='g') #when did mouse find reward
 
 # plt.vlines(edata.time_ttl[923], min(lineoffsets1)-1, max(lineoffsets1)+1, color='b') #custom marker
-
 
 # neuron_no = len(edata_dict['T16-18'].t_spike_train)
 # plt.hlines([neuron_no, neuron_no*2, neuron_no*3, neuron_no*4, neuron_no*5], -10, 10, colors='k')
@@ -191,23 +183,100 @@ plt.xlabel('Time (s)' , fontsize=20)
 plt.title(f'Cell {neuron}')
 ax.set_yticks([])
 ax.margins(0)
-plt.xlim((-20,edata.time_ttl[edata.k_reward]-t_start+10))
+plt.xlim((-20, t_reward+10))
 
 # path_data = rf'F:\Spike Sorting\Data\3_Raster\{exp}_M{mouse}'
 # plt.savefig(path_data+f'/figs/Raster_M{edata.mouse_number}_T{edata.trial}_Cell{neuron}.png', dpi=600, bbox_inches='tight', pad_inches = 0)
 
 plt.show()
+
+#%% Count Firing rate before and after events
+time_interval = 20
+# event = edata.time_ttl[21937]-t_start #event at a certain index
+event = t_reward
+numSpike_pre = np.sum((spike_sample >= event-time_interval) & (spike_sample <= event))
+numSpike_post = np.sum((spike_sample >= event) & (spike_sample <= event+time_interval))
+print(f"Firing rate pre reward is {numSpike_pre/time_interval} Hz")
+print(f"Firing rate post reward is {numSpike_post/time_interval} Hz")
+
+#%% Plot ISI and ISIH
+ISI = np.diff(spike_sample) #calculate ISI
+
+#show raw ISI
+plt.plot(ISI)
+plt.title("Raw ISI")
+plt.show()
+
+#show histogram
+count, bins, ignored = plt.hist(ISI, 40, density=True, log=True)
+plt.title("ISI Histogram")
+plt.show() #if it is a poisson process, graph is exponential
+
+#%% Plot firing rate histogram over trajectory
+bin_width = 0.1
+min_time = t_start
+# max_time = t_reward+10
+max_time = np.max(spike_sample)
+bins = np.arange(min_time, max_time + bin_width, bin_width)
+
+# Plot the histogram
+plt.figure(figsize=(8, 5))
+plt.hist(spike_sample, bins=bins, edgecolor='black', alpha=0.75)
+plt.title('Firing Rate Histogram')
+plt.xlabel('Time (s)')
+plt.ylabel('Spike Count')
+
+# Show the plot
+plt.show()
+
+#%% plot correlation between firing rate and speed
+speed = edata.velocity
+
+# Define 100 ms time bins (0.1 seconds)
+bin_size = 0.1  # 100 ms in seconds
+min_time = min(edata.time_ttl)
+max_time = max(edata.time_ttl)
+time_bins = np.arange(min_time, max_time + bin_size, bin_size)
+
+# Calculate firing rate: count spikes in each 100ms time bin
+firing_rate, _ = np.histogram(edata.t_spikeTrains[neuron], bins=time_bins)
+
+# Resample velocity to match 100 ms bins by averaging velocity values in each bin
+binned_velocity = []
+for i in range(len(time_bins) - 1):
+    # Find velocity values within the current bin
+    indices_in_bin = np.where((edata.time_ttl >= time_bins[i]) & (edata.time_ttl < time_bins[i + 1]))[0]
+    if len(indices_in_bin) > 0:
+        binned_velocity.append(np.mean(speed[indices_in_bin]))
+    else:
+        binned_velocity.append(np.nan)  # Use NaN if no data points in this bin
+
+binned_velocity = np.array(binned_velocity)
+
+# Remove NaN values from both binned_velocity and firing_rate for correlation and plotting
+valid_indices = ~np.isnan(binned_velocity)
+binned_velocity = binned_velocity[valid_indices]
+firing_rate = firing_rate[valid_indices]
+
+# Plot velocity vs. firing rate
+plt.figure(figsize=(8, 6))
+plt.scatter(binned_velocity, firing_rate, color='blue', label='Data points')
+plt.title('Velocity vs. Firing Rate (100ms bins)')
+plt.xlabel('Average Velocity (cm/s)')
+plt.ylabel('Firing Rate (spikes/100ms)')
+plt.grid(True)
+plt.legend()
 #%%
 '''NEW mat file plot aligned MULTIPLE inter-trial events'''
 exp = '2024-02-15'
 mouse = '105'
-trial = '24'
-neuron = 1
+trial = '19'
+neuron = 13
 
-(edata := elib.EphysTrial()).Load(exp, mouse, trial)
+edata = elib.EphysTrial().Load(exp, mouse, trial)
 
 print(edata.cellLabels[neuron])
-print(edata.firingRates[neuron])
+print(edata.firingRate[neuron])
 spike_train = edata.t_spikeTrains[neuron]
 event_list = edata.k_hole_checks[np.where(edata.k_hole_checks[:,0] == 51)][:,1] #get list of hole checks at reward hole
 
@@ -273,10 +342,62 @@ plt.xlim((min(t_start_list)-max(t_reward_list)-5,50))
 plt.show()
 
 #%%
+'''NEW MAT FILE plot 20 sec before and after event'''
+exp = '2024-02-15'
+mouse = 105
+trial = '19'
+neuron = 13
+edata = elib.EphysTrial.Load(exp, mouse,trial)
+
+print(edata.cellLabels[neuron])
+print(edata.firingRate[neuron])
+
+t_start = edata.time_ttl[np.isfinite(edata.r_center)[:,0]][0] #returns the first non-nan coordinate
+
+spike_sample = edata.t_spikeTrains[neuron]-t_start
+if len(spike_sample) <=0: raise ValueError('there are no spikes in this trial')
+
+k_event = 13049#edata.k_reward
+# test = np.where((edata.k_hole_checks[:,1] > 0) & (edata.k_hole_checks[:,1] < edata.k_reward)) 
+
+'''plot raster of trial'''
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(16, 2))
+lineoffsets1 = range(1)
+
+ax.eventplot(spike_sample, lineoffsets=lineoffsets1, color='#5f0f40')
+
+#not callebrated to t_start yet
+# t_hole_checks = np.sort(edata.time_ttl[edata.k_hole_checks[:,1]])
+# plt.plot(t_hole_checks , np.zeros(t_hole_checks.shape),'o', color = '#F18701')
+
+plt.vlines(0, min(lineoffsets1)-1, max(lineoffsets1)+1, color='k') #when did trial start
+plt.vlines(edata.time_ttl[k_event]-t_start, min(lineoffsets1)-1, max(lineoffsets1)+1, color='g') #when did mouse find reward
+
+# plt.vlines(edata.time_ttl[923], min(lineoffsets1)-1, max(lineoffsets1)+1, color='b') #custom marker
+
+# neuron_no = len(edata_dict['T16-18'].t_spike_train)
+# plt.hlines([neuron_no, neuron_no*2, neuron_no*3, neuron_no*4, neuron_no*5], -10, 10, colors='k')
+# pad = neuron_no/2
+# plt.yticks([0+pad, neuron_no+pad, neuron_no*2+pad, neuron_no*3+pad, neuron_no*4+pad, neuron_no*5+pad], 
+#            ['Trial 13', 'Trial 14', 'Trial 15', 'Trial 16', 'Trial 17', 'Trial 18'], fontsize=18)
+
+plt.xticks(fontsize=18)
+plt.xlabel('Time (s)' , fontsize=20)
+# plt.ylabel('Neurons', fontsize=20)
+plt.title(f'Cell {neuron}')
+ax.set_yticks([])
+ax.margins(0)
+plt.xlim((edata.time_ttl[k_event]-t_start-20,edata.time_ttl[k_event]-t_start+120))
+
+# path_data = cg.ROOT_DIR
+# plt.savefig(path_data+f'/figs/Raster_M{edata.mouse_number}_T{edata.trial}_Cell{neuron}.png', dpi=600, bbox_inches='tight', pad_inches = 0)
+
+plt.show()
+
+#%%
 spike_sample_eventcrop = []
 for x, k_edata in enumerate(edata_dict):
     spike_sample_eventcrop = spike_sample_eventcrop + get_epoch_event_crop(edata_dict[k_edata], tdata[x*3:(x+1)*3]) #select the epoch and the trials that go with the epoch
-
 
 '''plot 10 sec before and after reward'''
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(16, 8))
@@ -320,3 +441,50 @@ plt.vlines(0, ymin=0, ymax=450., color='r') #when did mouse find reward
 # plt.savefig(path_data+f'/figs/hist_M{tdata[0].mouse_number}_T{tdata[0].trial}-{tdata[-1].trial}.png', dpi=600, bbox_inches='tight', pad_inches = 0)
 
 plt.show()
+
+#%% get cell info
+for i in edata.cellLabels: print(i)
+for i in edata.firingRate: print(i)
+#%% get index when mouse enters an area of interest
+def is_inside_circle_np(coordinates, circle):
+    """
+    Check if points (x, y) are inside a circle using NumPy.
+    
+    coordinates: NumPy array of shape (n, 2) where each row is an (x, y) point.
+    circle: tuple defining the circle (x_center, y_center, radius).
+    
+    Returns a boolean array where True indicates the point is inside the circle.
+    """
+    x_center, y_center, radius = circle
+    distances = np.sqrt((coordinates[:, 0] - x_center) ** 2 + (coordinates[:, 1] - y_center) ** 2)
+    return distances <= radius
+
+def find_first_entry_indices_np(coordinates, circle):
+    """
+    Given a NumPy array of (x, y) coordinates and a circular area,
+    find the indices where the agent first enters the circle in each continuous trajectory.
+    
+    coordinates: NumPy array of shape (n, 2) where each row is an (x, y) point.
+    circle: tuple defining the circle (x_center, y_center, radius).
+    
+    Returns a list of indices corresponding to the first entry into the circle in each trajectory.
+    """
+    inside_circle = is_inside_circle_np(coordinates, circle)
+    
+    # Detect the first entry point by checking transitions from False to True
+    entry_indices = np.where((~inside_circle[:-1]) & inside_circle[1:])[0] + 1
+    
+    # Check if the first point is inside the circle (edge case)
+    if inside_circle[0]:
+        entry_indices = np.insert(entry_indices, 0, 0)
+    
+    return entry_indices.tolist()
+
+exp = '2024-02-15'
+mouse = 105
+trial = '19'
+neuron = 11
+edata = elib.EphysTrial.Load(exp, mouse,trial)
+coordinates = edata.r_center
+circle = (edata.r_arena_holes[34][0], edata.r_arena_holes[34][1], 6)  # circle with center at hole34 and radius 2
+k_entry_points = find_first_entry_indices_np(coordinates, circle)
