@@ -34,7 +34,7 @@ pprint(ss.installed_sorters()) #confirms that the sorter is loaded
 
 #%%
 '''load a single file'''
-multirecording = se.BinaryRecordingExtractor(r'F:\Spike Sorting\Data\1_RawDats\M108_loweringelectrode\M108_Day6_Turn14_240708_154529\amplifier.dat', 30000,64,'int16')
+multirecording = se.BinaryRecordingExtractor(r'F:\Spike Sorting\Data\1_RawDats\M110_loweringelectrode\M110_Day10_Turn15_241107_171851\amplifier.dat', 30000,64,'int16')
 multirecording
 
 #%%
@@ -170,6 +170,6 @@ default_TDC_params = ss.Kilosort2Sorter.default_params()
 default_TDC_params['projection_threshold'] = [9, 9]
 print(default_TDC_params)
 
-# sorting_TDC_5 = ss.run_sorter("kilosort2", recording=multirecording, output_folder=r'F:\Spike Sorting\Data\2_Kilosorted2.5\M108_loweringelectrode\M108_Day6_Turn14_240708_154529\recording')
-sorting_TDC_5 = ss.run_sorter("kilosort2", recording=multirecording, output_folder=r'F:\Spike Sorting\Data\2_Kilosorted2.5'+dayPath+'\\'+mouse+'\\recording')
+sorting_TDC_5 = ss.run_sorter("kilosort2", recording=multirecording, output_folder=r'F:\Spike Sorting\Data\2_Kilosorted2.5\\M110_loweringelectrode\M110_Day10_Turn15_241107_171851\recording')
+# sorting_TDC_5 = ss.run_sorter("kilosort2", recording=multirecording, output_folder=r'F:\Spike Sorting\Data\2_Kilosorted2.5'+dayPath+'\\'+mouse+'\\recording')
 sorting_TDC_5.get_unit_ids()

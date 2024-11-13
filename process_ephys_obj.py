@@ -22,10 +22,10 @@ import lib_ephys_obj as elib
 import modules.lib_process_data_to_mat as plib
 
 #%%
-epoch = 2
+epoch = 3
 path_m = r'H:\Phy\2024-02-15_M105\Day7_Probe-T20-24\M105\recording'
 
-TTL_in = sio.loadmat(path_m + '\TTL_in-T22-24.mat')['v'] #TTL Pulse
+# TTL_in = sio.loadmat(path_m + '\TTL_in-T22-24.mat')['v'] #TTL Pulse
 
 spikes = sio.loadmat(path_m + '\\recording.spikes.cellinfo')['spikes'] #loads the spikes!
 cell_metrics = sio.loadmat(path_m + '\\recording.cell_metrics.cellinfo')['cell_metrics'][0]
@@ -87,6 +87,15 @@ def take_last_trials_out_trial7(spikes, interval, sr): #get spikes from last epo
         spike_train.append(spike_sample[inter] - 8566.285*sr) #8566.285*sr
     return spike_train
 
+def take_baseline_out(spikes, interval, sr): #get spikes from baseline epoch, assuming it is the second epoch
+    spike_train = []
+    for st in range(len(spikes['ts'][0][0][0])):
+        spike_sample = fix_spike_formats(spikes['ts'][0][0][0][st])
+        inter = np.where((spike_sample  >= interval[0]*sr) & (spike_sample  <= interval[1]*sr)) #get second interval
+        assert len(spike_sample) > len(spike_sample[inter])
+        spike_train.append(spike_sample[inter] - interval[0]*sr)
+    return spike_train
+
 def TTL_extr(input): #for digital TTL
     start_tray = []
     end_tray   = []
@@ -126,8 +135,11 @@ if epoch == 2:
     spike_train = take_last_trials_out(spikes,interval,sr) #get the last epoch spikes
     TTL = extract_analog_TTL(TTL_in)
     
+if epoch == 3:
+    spike_train = take_baseline_out(spikes,interval,sr) #get the second epoch spikes
+    
 t_spike_train = [st/sr for st in spike_train]
-TTL_time = TTL/sr #gets TTL for first epoch
+# TTL_time = TTL/sr #gets TTL for first epoch
 #%%
 '''Preview the raw TTL'''
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 4))
@@ -150,9 +162,17 @@ plt.show()
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(16, 8))
 lineoffsets1 = range(len(spike_train))
 ax.eventplot(t_spike_train,lineoffsets=lineoffsets1)
-plt.vlines(TTL_time, min(lineoffsets1), max(lineoffsets1), color='r')
+# plt.vlines(TTL_time, min(lineoffsets1), max(lineoffsets1), color='r')
 # plt.plot(spike_all, (tri) * np.ones(spike_sample.shape),'|')
 plt.show()
+
+#%% Get firing rate of all cells during the epoch
+epoch_time = interval[1] - interval[0]
+fr_list = []
+for c in range(len(t_spike_train)):
+    fr = len(t_spike_train[c])/epoch_time
+    fr_list.append(fr)
+    
     
 #%% 
 trial_name = 'T22-24'    
