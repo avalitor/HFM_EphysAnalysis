@@ -16,6 +16,7 @@ import sys
 sys.path.append("F:\Spike Sorting\EthovisionPathAnalysis_HDF5")
 # import modules.lib_process_data_to_mat as plib
 from scipy.ndimage import gaussian_filter
+import config as cg
 # from scipy.stats import binned_statistic_2d
 
 #%%
@@ -121,7 +122,7 @@ def draw_spike_heatmap(spike_coords, trial_coords, idx_end, ax, weighted = True)
     y = spike_coords[:idx_end, 1]
     #plot heatmap
     
-    bins = 60
+    bins = 60 #normally 60
     
     hm_spike, extent = make_heatmap(x, y, s=0, bins=bins)
     
@@ -135,7 +136,9 @@ def draw_spike_heatmap(spike_coords, trial_coords, idx_end, ax, weighted = True)
         hm_weighted = np.divide(hm_spike, occupancy, out=np.zeros_like(hm_spike), where=occupancy!=0)
         img = gaussian_filter(hm_weighted, sigma=2)
         # img = hm_weighted
-    else: img = gaussian_filter(hm_spike, sigma=2)
+    else: 
+        img = gaussian_filter(hm_spike, sigma=2)
+        # img = hm_spike
     
     colors = [(1,0,0,c) for c in np.linspace(0,1,100)]
     cmapred = mcolors.LinearSegmentedColormap.from_list('mycmap', colors, N=20)
@@ -154,8 +157,8 @@ def draw_traj_heatmap(coords, idx_end, ax):
     y = coords[:idx_end, 1]
     
     #plot heatmap
-    img, extent = make_heatmap(x, y, s=2, bins=60)
-    # img, extent = occupancy_bins(edata)
+    # img, extent = make_heatmap(x, y, s=0, bins=60)
+    img, extent = occupancy_bins(edata, bins=30)
     colors = [(1,0,0,c) for c in np.linspace(0,1,100)]
     cmapred = mcolors.LinearSegmentedColormap.from_list('mycmap', colors, N=20)
     
@@ -190,7 +193,7 @@ def draw_hole_checks(data, idx_end, ax):
     # k_times = data.k_hole_checks
     
     colors_time_course = plt.get_cmap('cool') # plt.get_cmap('cool') #jet_r
-    t_seq_hole = data.time[k_times[:,1]]/data.time[data.k_reward-1]
+    t_seq_hole = data.time[k_times[:,1]]/data.time[idx_end-1]
     # t_seq_traj = data.time/data.time[data.k_reward-1]
     
     #plots hole checks
@@ -241,16 +244,22 @@ def plot_traj_hole_checks(data, spike_sample, crop_at_target = True, savefig=Fal
 
     fig, ax = plt.subplots()
     
-    if crop_at_target: idx_end = data.k_reward + 10 #75 = extra 3 seconds
+    if crop_at_target: idx_end = data.k_reward + 75 #75 = extra 3 seconds
     else: idx_end = len(data.time)
     
     draw_arena(data, ax, color='k')
-    draw_hole_checks(data, idx_end, ax)
+    # draw_hole_checks(data, idx_end, ax)
     draw_spikes(data, spike_sample, idx_end, ax)
     
     
     plt.plot(data.r_center[:idx_end,0], data.r_center[:idx_end,1], color='k', alpha=0.3) #plot path, alpha 0.3
     # ax.scatter(data.r_nose[:idx_target,0], data.r_nose[:idx_target,1], s=1.5, facecolors=colors_time_course(t_seq_traj[:idx_target])) #plot path with colours
+    
+    #plot path segment
+    # k_segment_start = 21937
+    # time_span = 250
+    # plt.plot(data.r_center[k_segment_start-time_span:k_segment_start+time_span,0], data.r_center[k_segment_start-time_span:k_segment_start+time_span,1], color='k', alpha=0.7) #plot path segment
+    # plt.plot(data.r_center[k_segment_start][0], data.r_center[k_segment_start][1], marker='x', markersize=10, color='red')
     
     # spike_coords = calc_spike_coords(data, spike_sample, idx_end, 2)
     # draw_spike_heatmap(spike_coords, data.r_center, idx_end, ax, weighted=True)
@@ -292,10 +301,10 @@ if __name__ == '__main__':
        
     exp = '2024-02-15'
     mouse = 105
-    trial = 'Probe'
-    neuron = 0
+    trial = '19'
+    neuron = 11
     
-    path_data =  rf'F:\Spike Sorting\Data\3_Raster\{exp}_M{mouse}'
+    path_data =  cg.ROOT_DIR
     
     
     edata = elib.EphysTrial.Load(exp, mouse,trial)
@@ -313,5 +322,5 @@ if __name__ == '__main__':
     print(edata.firingRate[neuron])
     
     
-    plot_place_field(edata, edata.t_spikeTrains[neuron], crop_at_target=False, savefig=False)
-    # plot_traj_hole_checks(edata, edata.t_spikeTrains[neuron], crop_at_target=False, savefig=False)
+    # plot_place_field(edata, edata.t_spikeTrains[neuron], crop_at_target=False, savefig=False)
+    plot_traj_hole_checks(edata, edata.t_spikeTrains[neuron], crop_at_target=False, savefig=False)
