@@ -345,8 +345,8 @@ plt.show()
 '''NEW MAT FILE plot 20 sec before and after event'''
 exp = '2024-02-15'
 mouse = 105
-trial = '19'
-neuron = 13
+trial = '18'
+neuron = 4
 edata = elib.EphysTrial.Load(exp, mouse,trial)
 
 print(edata.cellLabels[neuron])
@@ -357,7 +357,7 @@ t_start = edata.time_ttl[np.isfinite(edata.r_center)[:,0]][0] #returns the first
 spike_sample = edata.t_spikeTrains[neuron]-t_start
 if len(spike_sample) <=0: raise ValueError('there are no spikes in this trial')
 
-k_event = 13049#edata.k_reward
+k_event = edata.k_reward
 # test = np.where((edata.k_hole_checks[:,1] > 0) & (edata.k_hole_checks[:,1] < edata.k_reward)) 
 
 '''plot raster of trial'''
@@ -373,7 +373,12 @@ ax.eventplot(spike_sample, lineoffsets=lineoffsets1, color='#5f0f40')
 plt.vlines(0, min(lineoffsets1)-1, max(lineoffsets1)+1, color='k') #when did trial start
 plt.vlines(edata.time_ttl[k_event]-t_start, min(lineoffsets1)-1, max(lineoffsets1)+1, color='g') #when did mouse find reward
 
-# plt.vlines(edata.time_ttl[923], min(lineoffsets1)-1, max(lineoffsets1)+1, color='b') #custom marker
+# plt.vlines(edata.time_ttl[1048]-t_start, min(lineoffsets1)-1, max(lineoffsets1)+1, color='b') #custom marker
+# plt.vlines(edata.time_ttl[1870]-t_start, min(lineoffsets1)-1, max(lineoffsets1)+1, color='b') #custom marker
+event_start = edata.time_ttl[1048]-t_start
+event_end = edata.time_ttl[1870]-t_start
+ax.barh(0.7, event_end - event_start, left=event_start, height=0.2, color='green', edgecolor='none')
+
 
 # neuron_no = len(edata_dict['T16-18'].t_spike_train)
 # plt.hlines([neuron_no, neuron_no*2, neuron_no*3, neuron_no*4, neuron_no*5], -10, 10, colors='k')
@@ -445,6 +450,17 @@ plt.show()
 #%% get cell info
 for i in edata.cellLabels: print(i)
 for i in edata.firingRate: print(i)
+#%% get event index from video timestamp
+exp = '2024-02-15'
+mouse = 105
+trial = '18'
+neuron = 13
+edata = elib.EphysTrial.Load(exp, mouse,trial)
+
+print(edata.cellLabels[neuron])
+print(edata.firingRate[neuron])
+
+k_event = np.searchsorted(edata.time, 75)
 #%% get index when mouse enters an area of interest
 def is_inside_circle_np(coordinates, circle):
     """

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import lib_ephys_obj as elib
 import plot_place_fields as ppf
 
-def heading(exp):
+def heading(exp): #this function is only necessary if heading information is not already stored in trial data file
     #calculate mouse-direction vector
     mouse_vector = np.diff(exp.r_center, axis=0)
     mouse_heading = np.arctan2(mouse_vector[:,1],mouse_vector[:,0]) * (180 / np.pi)
@@ -29,7 +29,7 @@ def calc_spike_idx(tdata, spike_sample, idx_end):
     return idx_spike
 
 def heading_from_idx(tdata, idx_spike):
-    '''depreciated. this gets heading from each spike idx'''
+    '''depreciated. this gets heading from each spike idx. Use calc_normalized_heading_preference instead'''
     spike_heading = [] #use time index to get heading
     # spike_coords = [] #use time index to get coords
     for i in idx_spike:
