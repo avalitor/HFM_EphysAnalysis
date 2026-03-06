@@ -22,18 +22,19 @@ import lib_ephys_obj as elib
 import modules.lib_process_data_to_mat as plib
 
 #%%
-epoch = 3
-path_m = r'H:\Phy\2024-02-15_M105\Day7_Probe-T20-24\M105\recording'
+epoch = 1 #choose 1 or 2 if the recording is before or after the baseline. choose 3 if its the 2nd epoch
+path_m = r'F:\Spike Sorting\Data\2_Phyed\2025-01-21_M112\Day2_Habit1\recording'
 
-# TTL_in = sio.loadmat(path_m + '\TTL_in-T22-24.mat')['v'] #TTL Pulse
+TTL_in = sio.loadmat(path_m + '\TTL_in-Habit1.mat')['v'] #TTL Pulse
 
 spikes = sio.loadmat(path_m + '\\recording.spikes.cellinfo')['spikes'] #loads the spikes!
 cell_metrics = sio.loadmat(path_m + '\\recording.cell_metrics.cellinfo')['cell_metrics'][0]
 cell_labels  = cell_metrics['putativeCellType'][0][0] #gets lables of each neuron
 cell_firingRate = cell_metrics['firingRate'][0][0] #gets lables of each neuron
+cell_burst_index = cell_metrics['burstIndex_Royer2012'][0][0]
 session = sio.loadmat(path_m + '\\recording.session.mat')['session']
 interval = [session['epochs'][0][0][0][1][0][0][1][0][0], session['epochs'][0][0][0][1][0][0][2][0][0]] #load epoch array
-
+cell_metrics_dict = {name: elib.unwrap(cell_metrics[name]) for name in cell_metrics.dtype.names}
 #%% update existing files with firing rate
 # exp = '2023-12-18'
 # mouse = 103
@@ -139,7 +140,7 @@ if epoch == 3:
     spike_train = take_baseline_out(spikes,interval,sr) #get the second epoch spikes
     
 t_spike_train = [st/sr for st in spike_train]
-# TTL_time = TTL/sr #gets TTL for first epoch
+TTL_time = TTL/sr #gets TTL for first epoch
 #%%
 '''Preview the raw TTL'''
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 4))
@@ -162,7 +163,7 @@ plt.show()
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(16, 8))
 lineoffsets1 = range(len(spike_train))
 ax.eventplot(t_spike_train,lineoffsets=lineoffsets1)
-# plt.vlines(TTL_time, min(lineoffsets1), max(lineoffsets1), color='r')
+plt.vlines(TTL_time, min(lineoffsets1), max(lineoffsets1), color='r')
 # plt.plot(spike_all, (tri) * np.ones(spike_sample.shape),'|')
 plt.show()
 
@@ -175,12 +176,12 @@ for c in range(len(t_spike_train)):
     
     
 #%% 
-trial_name = 'T22-24'    
+trial_name = 'Habit1'    
 Epoch = elib.EphysEpoch(trial=trial_name, t_TTL = TTL_time, t_spike_train = t_spike_train, 
-                        spike_labels=cell_labels, sample_rate=sr, firingRate = cell_firingRate)
+                        spike_labels=cell_labels, sample_rate=sr, firingRate = cell_firingRate, cell_metrics=cell_metrics_dict)
 
 #save the processed data
-path_data = r'F:\Spike Sorting\Data\3_Raster\2024-02-15_M105\\'
+path_data = r'F:\Spike Sorting\Data\3_Raster\2025-01-21_M112\\'
 file=open(path_data+f'{trial_name}.EphysEpoch', 'wb')
 pickle.dump(Epoch, file)
 file.close()
@@ -191,9 +192,10 @@ file.close()
 # file.close()
 
 #%% 
-exp = '2024-02-15'
-mouse = "105"
-trial = '24'
+exp = '2025-01-21'
+mouse = "112"
+trial = 'Habituation 1'
+tr = 0 #is it trial 0, 1, 2 in the epoch? Controls which ttl signal you use
 
 path_data = rf'F:\Spike Sorting\Data\3_Raster\{exp}_M{mouse}\\'
 file = open(path_data+rf'\offset_dict_M{mouse}.pydict', 'rb')
@@ -216,7 +218,7 @@ t = plib.TrialData()
 t.Load(exp, mouse, trial)
 
 edata = elib.EphysEpoch().Load(exp, mouse, trial_name)
-tr = 2 #is it trial 0, 1, 2 in the epoch?
+
 
 spike_sample_all = [edata.t_spike_train[i] - edata.t_TTL[tr][0] for i in range(len(edata.t_spike_train))] #synch all neuorns to ttl
 
@@ -272,15 +274,15 @@ test = crop_trains_to_trial(spike_sample_all, e)
 e.cellLabels = np.asarray(edata.spike_labels)
 e.firingRate = np.asarray(edata.firingRate)
 e.sampleRate = edata.sample_rate
+e.cell_metrics = edata.cell_metrics
 
 e.Store()
 #%%
-exp = '2024-02-15'
-mouse = "105"
-trial = '24'
+exp = '2024-11-09'
+mouse = "110"
+trial = 'Dark2'
 
-t = plib.TrialData()
-t.Load(exp, mouse, trial)
+# t = plib.TrialData()
+# t.Load(exp, mouse, trial)
 
-e2 = elib.EphysTrial()
-e2.Load(exp, mouse, trial)
+e2 = elib.EphysTrial().Load(exp, mouse, trial)

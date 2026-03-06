@@ -9,7 +9,7 @@ process data that has gone through cell explorer into an object
 
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors #for heatmap colours
-import pickle
+# import pickle
 import numpy as np
 import lib_ephys_obj as elib
 import sys
@@ -299,10 +299,10 @@ def plot_traj_hole_checks(data, spike_sample, crop_at_target = True, savefig=Fal
 
 if __name__ == '__main__':
        
-    exp = '2024-02-15'
-    mouse = 105
-    trial = '19'
-    neuron = 11
+    exp = '2024-11-09'
+    mouse = 110
+    trial = 'Probe2'
+    neuron = 0
     
     path_data =  cg.ROOT_DIR
     
@@ -322,5 +322,5 @@ if __name__ == '__main__':
     print(edata.firingRate[neuron])
     
     
-    # plot_place_field(edata, edata.t_spikeTrains[neuron], crop_at_target=False, savefig=False)
-    plot_traj_hole_checks(edata, edata.t_spikeTrains[neuron], crop_at_target=False, savefig=False)
+    plot_place_field(edata, edata.t_spikeTrains[neuron], crop_at_target=False, savefig=False)
+    # plot_traj_hole_checks(edata, edata.t_spikeTrains[neuron], crop_at_target=False, savefig=False)

@@ -9,7 +9,7 @@ Load files from intan and run through kilosort
 import os
 # import glob
 import numpy as np
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from pprint import pprint
 
 import spikeinterface as si
@@ -34,23 +34,29 @@ pprint(ss.installed_sorters()) #confirms that the sorter is loaded
 
 #%%
 '''load a single file'''
-multirecording = se.BinaryRecordingExtractor(r'F:\Spike Sorting\Data\1_RawDats\M110_loweringelectrode\M110_Day10_Turn15_241107_171851\amplifier.dat', 30000,64,'int16')
+multirecording = se.BinaryRecordingExtractor(
+    r'F:\Spike Sorting\Data\1_RawDats\2025-01-21_Ephys\Day12_T35-39-Probe4\M112_T35-37_noTurn_250201_170835\amplifier.dat',
+    30000,64,'int16')
 multirecording
 
 #%%
 '''splitting two ports'''
-multirecording = se.BinaryRecordingExtractor(r'F:\Spike Sorting\Data\1_RawDats\2023-10-16_M101\Day6_Probe-T19-20\N12 Probe1_Base NoTurn_231021_134626\amplifier.dat', 30000,128,'int16')
+multirecording = se.BinaryRecordingExtractor(r'F:\Spike Sorting\Data\1_RawDats\2025-01-21_Ephys\Day12_T35-39-Probe4\M112_T35-37_baseline_250201_173726\amplifier.dat', 30000,128,'int16')
 multirecording
 
 channel_ids = np.arange(128)
 recording1 = multirecording.channel_slice(channel_ids=channel_ids[:64])
 recording2 = multirecording.channel_slice(channel_ids=channel_ids[64:])
 
+
 #%%
 '''plot raw data'''
+multirecording = se.BinaryRecordingExtractor(r'F:\Spike Sorting\Data\2_Kilosorted2.5\2024-11-09_Ephys\Day3_T1-3\M110\recording\recording.dat', 30000,64,'int16')
 fs = 30000
 rec_f = si.bandpass_filter(multirecording, freq_min=300, freq_max=10000)
 w_ts = sw.plot_timeseries(rec_f, time_range=(300, 400))
+
+
 
 #%%
 '''concat a day's files together'''
@@ -75,8 +81,8 @@ multirecording
 #%%
 '''concat files based on mouse and split ports'''
 rawDatPath = r'F:\Spike Sorting\Data\1_RawDats'
-dayPath = r'\2024-02-12_M104\Day6_T13-18'
-mouse = 'M105'
+dayPath = r'\2025-01-21_Ephys\Day12_T35-39-Probe4'
+mouse = 'M112'
 port = 'B'
 
 recording_list = []
@@ -89,7 +95,7 @@ trial_order= []
 
 for (root, dirs, files) in os.walk(path):
     for dirname in dirs:
-        if dirname.split('_')[1] == 'baseline':
+        if dirname.split('_')[2] == 'baseline':
             print(f'Baseline: {dirname}')
             baseline_recording = se.BinaryRecordingExtractor(os.path.join(path, dirname, 'amplifier.dat'), sampling_frequency,128,'int16')
             if port == 'A':
@@ -109,7 +115,7 @@ else:
     recording_list = [trial_list[0], baseline_recording, trial_list[1]]
     
 # recording_list
-
+multirecording = si.concatenate_recordings(recording_list)
 
 #%% Manual file selection
 channel_ids = np.arange(128)
@@ -149,7 +155,93 @@ for i, point in enumerate(times):
         time_ranges.append(f"Epoch {i + 1}: {epoch_start} - {epoch_end}")
 print(time_ranges)
 
-#%%
+#%% plot raw data using matplotlib, need to have recordinglist to plot epochs
+
+path=r'F:\Spike Sorting\Data\2_Kilosorted2.5'+dayPath+'\\'+mouse+'\\recording'
+recording = se.BinaryRecordingExtractor(path+r'\recording.dat', 30000,64,'int16')
+
+# Get recording info
+sampling_rate = recording.get_sampling_frequency()
+duration = recording.get_num_frames() / sampling_rate
+n_channels = min(8, recording.get_num_channels())
+channel_ids = recording.channel_ids[:n_channels]
+
+print(f"Recording duration: {duration:.1f} seconds ({duration/60:.1f} minutes)")
+
+# Downsample to ~1 sample per second for overview
+downsample_factor = int(sampling_rate)  # 30000 -> 1 Hz
+chunk_size = 30 * sampling_rate  # Process 30 seconds at a time
+
+# Collect data in a list first (more flexible)
+traces_list = []
+time_list = []
+
+print("Extracting downsampled data in chunks...")
+
+for start_frame in range(0, recording.get_num_frames(), chunk_size):
+    end_frame = min(start_frame + chunk_size, recording.get_num_frames())
+    
+    # Get chunk
+    chunk = recording.get_traces(start_frame=start_frame, end_frame=end_frame, 
+                                  channel_ids=channel_ids)
+    
+    # Downsample this chunk
+    chunk_ds = chunk[::downsample_factor, :]
+    
+    # Create time vector for this chunk
+    chunk_frames = np.arange(0, chunk.shape[0], downsample_factor)[:chunk_ds.shape[0]]
+    chunk_times = (start_frame + chunk_frames) / sampling_rate
+    
+    # Append to lists
+    traces_list.append(chunk_ds)
+    time_list.append(chunk_times)
+    
+    if start_frame % (300 * sampling_rate) == 0:  # Progress every 5 minutes
+        print(f"  Processed {start_frame/sampling_rate:.0f}s / {duration:.0f}s")
+
+# Concatenate all chunks
+traces_ds = np.vstack(traces_list)
+time_vector = np.concatenate(time_list)
+
+print(f"Plotting {len(time_vector)} points...")
+
+# Plot
+fig, ax = plt.subplots(figsize=(24, 10))
+offset = 5000
+
+for i in range(n_channels):
+    ax.plot(time_vector, traces_ds[:, i] + i * offset, linewidth=0.3, alpha=0.8)
+
+# Mark key timepoints
+times = [t.get_num_frames() / sampling_frequency for t in recording_list]
+
+seam_times = []
+cumulative_time = 0.0
+
+for t in times[:-1]:          # exclude final endpoint
+    cumulative_time += t
+    seam_times.append(cumulative_time)
+    
+for seam in seam_times:
+    plt.axvline(seam, color="r", linestyle="--", alpha=0.7)
+
+# Add vertical lines every 1000s for reference
+for t in range(0, int(duration), 1000):
+    ax.axvline(t, color='gray', linestyle=':', linewidth=0.5, alpha=0.3)
+
+ax.set_xlabel('Time (s)', fontsize=14)
+ax.set_ylabel('Channel + offset', fontsize=14)
+ax.set_title('Full recording raw traces (1 Hz downsampled)', fontsize=16)
+ax.set_xlim(0, duration)
+ax.legend(fontsize=12)
+ax.grid(True, alpha=0.2)
+plt.tight_layout()
+
+plt.savefig(path+r'\fullRecording.png', dpi=150, bbox_inches='tight')
+print("Plot saved to full_recording.png")
+plt.show()
+
+#%% runs kilosort2.4
 
 #MATLAB ch = [42, 40, 39, 38, 36, 35, 34, 33, 30, 31, 29, 27, 26, 25, 23, 21,47, 46, 45, 44, 43, 41, 37, 32, 28, 24, 22, 19, 20, 18, 17, 15,
 # 56, 54, 55, 53, 52, 51, 50, 49, 48, 16, 14, 13, 12, 10, 11, 9,64, 63, 62, 61, 60, 59, 58, 57, 8, 7, 6, 5, 4, 3, 2, 1]
@@ -170,6 +262,6 @@ default_TDC_params = ss.Kilosort2Sorter.default_params()
 default_TDC_params['projection_threshold'] = [9, 9]
 print(default_TDC_params)
 
-sorting_TDC_5 = ss.run_sorter("kilosort2", recording=multirecording, output_folder=r'F:\Spike Sorting\Data\2_Kilosorted2.5\\M110_loweringelectrode\M110_Day10_Turn15_241107_171851\recording')
-# sorting_TDC_5 = ss.run_sorter("kilosort2", recording=multirecording, output_folder=r'F:\Spike Sorting\Data\2_Kilosorted2.5'+dayPath+'\\'+mouse+'\\recording')
+# sorting_TDC_5 = ss.run_sorter("kilosort2", recording=multirecording, output_folder=r'F:\Spike Sorting\Data\2_Kilosorted2.5\\M110_loweringelectrode\M110_Day10_Turn15_241107_171851\recording')
+sorting_TDC_5 = ss.run_sorter("kilosort2", recording=multirecording, output_folder=r'F:\Spike Sorting\Data\2_Kilosorted2.5'+dayPath+'\\'+mouse+'\\recording')
 sorting_TDC_5.get_unit_ids()

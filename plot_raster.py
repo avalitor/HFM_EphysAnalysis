@@ -343,10 +343,10 @@ plt.show()
 
 #%%
 '''NEW MAT FILE plot 20 sec before and after event'''
-exp = '2024-02-15'
-mouse = 105
-trial = '19'
-neuron = 13
+exp = '2024-11-09'
+mouse = 110
+trial = 'Habituation 1'
+neuron = 0
 edata = elib.EphysTrial.Load(exp, mouse,trial)
 
 print(edata.cellLabels[neuron])
@@ -357,7 +357,7 @@ t_start = edata.time_ttl[np.isfinite(edata.r_center)[:,0]][0] #returns the first
 spike_sample = edata.t_spikeTrains[neuron]-t_start
 if len(spike_sample) <=0: raise ValueError('there are no spikes in this trial')
 
-k_event = 13049#edata.k_reward
+k_event = edata.k_reward
 # test = np.where((edata.k_hole_checks[:,1] > 0) & (edata.k_hole_checks[:,1] < edata.k_reward)) 
 
 '''plot raster of trial'''
