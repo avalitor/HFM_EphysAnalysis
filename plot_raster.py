@@ -11,7 +11,7 @@ import numpy as np
 import lib_ephys_obj as elib
 import modules.lib_process_data_to_mat as plib
 import config as cg
-
+cg.PROCESSED_FILE_DIR
 
 def get_trial_event_crop(spike_trains, trialdata): #given synched spike trains & trial
     spike_sample_eventcrop = []

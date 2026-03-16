@@ -81,9 +81,9 @@ multirecording
 #%%
 '''concat files based on mouse and split ports'''
 rawDatPath = r'F:\Spike Sorting\Data\1_RawDats'
-dayPath = r'\2025-01-21_Ephys\Day12_T35-39-Probe4'
-mouse = 'M112'
-port = 'B'
+dayPath = r'\2023-12-18_Ephys\Day3_T1-6'
+mouse = 'M102'
+port = 'A'
 
 recording_list = []
 sampling_frequency = 30000
@@ -114,7 +114,7 @@ elif trial_order[0] > trial_order[1]: #if the order is backwards
 else:
     recording_list = [trial_list[0], baseline_recording, trial_list[1]]
     
-# recording_list
+recording_list
 multirecording = si.concatenate_recordings(recording_list)
 
 #%% Manual file selection

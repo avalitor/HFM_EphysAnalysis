@@ -8,7 +8,7 @@ library of classes and functions for ephys
 """
 import matplotlib.pyplot as plt
 import pickle
-from modules.lib_process_data_to_mat import TrialData
+# from modules.lib_process_data_to_mat import TrialData
 import glob #for file search
 import config as cfg
 import scipy.io
@@ -141,10 +141,10 @@ class EphysTrial: #this is the actual important class for combining behav data a
             raise IOError(f'File {self.filename} already exists.')
         
         #create mat file here
-        scipy.io.savemat(save_path,self.__dict__,long_field_names=True)
+        scipy.io.savemat(save_path,self._prepare_dict_for_mat(),long_field_names=True)
         
     @classmethod
-    def Load(cls, exp, mouse, trial):
+    def Load(cls, exp, mouse, trial, load_cell_metrics=False):
         try: path = glob.glob(glob.glob(cfg.PROCESSED_FILE_DIR+'/'+exp+'/')[0]+'*M%s_%s.mat'%(mouse, trial), 
                          recursive = True)[0] #finds file path based on ethovision trial number
         except: raise ValueError('The specified file does not exist ::: %s Mouse %s Trial %s'%(exp,mouse,trial))
@@ -160,15 +160,18 @@ class EphysTrial: #this is the actual important class for combining behav data a
             elif key == 't_spikeTrains':
                 setattr(obj, key, [np.squeeze(sp) for sp in mat_data['t_spikeTrains'][0].tolist()])
             elif key == 'cell_metrics':
-                val = mat_data[key]
-                # New format: JSON string
-                if val.dtype.kind in ('U', 'S'):  # unicode or byte string
-                    raw = str(np.squeeze(val))
-                    setattr(obj, key, json.loads(raw, object_hook=cls._json_object_hook))
-                # Old format: MATLAB struct — use unwrap
+                if not load_cell_metrics:
+                    pass
                 else:
-                    squeezed = np.squeeze(val)
-                    setattr(obj, key, {name: unwrap(squeezed[name]) for name in squeezed.dtype.names})
+                    val = mat_data[key]
+                    # New format: JSON string
+                    if val.dtype.kind in ('U', 'S'):  # unicode or byte string
+                        raw = str(np.squeeze(val))
+                        setattr(obj, key, json.loads(raw, object_hook=cls._json_object_hook))
+                    # Old format: MATLAB struct — use unwrap
+                    else:
+                        squeezed = np.squeeze(val)
+                        setattr(obj, key, {name: unwrap(squeezed[name]) for name in squeezed.dtype.names})
             else:
                 if mat_data[key].shape == (1,1):
                     setattr(obj, key, mat_data[key][0][0])
@@ -185,9 +188,13 @@ class EphysTrial: #this is the actual important class for combining behav data a
         #checks if save file already exists
         if not os.path.exists(save_path):
             raise IOError(f'File {self.filename} does not exist.')
+        
+        # Safeguard: don't overwrite if cell_metrics was not loaded
+        if not hasattr(self, 'cell_metrics'):
+            raise RuntimeError('Cannot Update: cell_metrics was not loaded. Reload with load_cell_metrics=True to save.')
             
         #update mat file here
-        scipy.io.savemat(save_path,self.__dict__,long_field_names=True)
+        scipy.io.savemat(save_path,self._prepare_dict_for_mat(),long_field_names=True)
 
 '''
 class EphysTrial(TrialData):

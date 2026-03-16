@@ -19,13 +19,15 @@ import matplotlib.pyplot as plt
 # import pandas as pd
 import pickle
 import lib_ephys_obj as elib
+import sys
+sys.path.append("F:\Spike Sorting\EthovisionPathAnalysis_HDF5")
 import modules.lib_process_data_to_mat as plib
 
 #%%
 epoch = 1 #choose 1 or 2 if the recording is before or after the baseline. choose 3 if its the 2nd epoch
-path_m = r'F:\Spike Sorting\Data\2_Phyed\2025-01-21_M112\Day2_Habit1\recording'
+path_m = r'F:\Spike Sorting\Data\2_Phyed\2024-02-15_M105\Day7_Probe-T20-24\M105\recording'
 
-TTL_in = sio.loadmat(path_m + '\TTL_in-Habit1.mat')['v'] #TTL Pulse
+# TTL_in = sio.loadmat(path_m + '\TTL_in-T11-13.mat')['v'] #TTL Pulse
 
 spikes = sio.loadmat(path_m + '\\recording.spikes.cellinfo')['spikes'] #loads the spikes!
 cell_metrics = sio.loadmat(path_m + '\\recording.cell_metrics.cellinfo')['cell_metrics'][0]
@@ -35,7 +37,7 @@ cell_burst_index = cell_metrics['burstIndex_Royer2012'][0][0]
 session = sio.loadmat(path_m + '\\recording.session.mat')['session']
 interval = [session['epochs'][0][0][0][1][0][0][1][0][0], session['epochs'][0][0][0][1][0][0][2][0][0]] #load epoch array
 cell_metrics_dict = {name: elib.unwrap(cell_metrics[name]) for name in cell_metrics.dtype.names}
-#%% update existing files with firing rate
+#%% update existing epoch files with firing rate
 # exp = '2023-12-18'
 # mouse = 103
 # trials = 'T13-15'
@@ -43,6 +45,15 @@ cell_metrics_dict = {name: elib.unwrap(cell_metrics[name]) for name in cell_metr
 # edata = elib.EphysEpoch().Load(exp, mouse, trials)
 # edata.firingRate = cell_firingRate
 # edata.Update(exp, mouse, trials)
+
+#update existing trial files with cell_metrics
+exp = '2024-02-15'
+mouse = "105"
+trial = '24'
+
+e=elib.EphysTrial().Load(exp, mouse, trial, True)
+e.cell_metrics = cell_metrics_dict
+e.Update()
 
 #%%
 def fix_spike_formats(Spike_sample_raw): #converts input into numpy array
@@ -176,12 +187,12 @@ for c in range(len(t_spike_train)):
     
     
 #%% 
-trial_name = 'Habit1'    
+trial_name = 'T11-13'    
 Epoch = elib.EphysEpoch(trial=trial_name, t_TTL = TTL_time, t_spike_train = t_spike_train, 
                         spike_labels=cell_labels, sample_rate=sr, firingRate = cell_firingRate, cell_metrics=cell_metrics_dict)
 
 #save the processed data
-path_data = r'F:\Spike Sorting\Data\3_Raster\2025-01-21_M112\\'
+path_data = r'F:\Spike Sorting\Data\3_Raster\2024-02-15_M105\\'
 file=open(path_data+f'{trial_name}.EphysEpoch', 'wb')
 pickle.dump(Epoch, file)
 file.close()
@@ -192,10 +203,10 @@ file.close()
 # file.close()
 
 #%% 
-exp = '2025-01-21'
-mouse = "112"
-trial = 'Habituation 1'
-tr = 0 #is it trial 0, 1, 2 in the epoch? Controls which ttl signal you use
+exp = '2024-02-15'
+mouse = "105"
+trial = '13'
+tr = 2 #is it trial 0, 1, 2 in the epoch? Controls which ttl signal you use
 
 path_data = rf'F:\Spike Sorting\Data\3_Raster\{exp}_M{mouse}\\'
 file = open(path_data+rf'\offset_dict_M{mouse}.pydict', 'rb')
@@ -278,11 +289,8 @@ e.cell_metrics = edata.cell_metrics
 
 e.Store()
 #%%
-exp = '2024-11-09'
-mouse = "110"
-trial = 'Dark2'
+exp = '2025-01-21'
+mouse = "112"
+trial = '13'
 
-# t = plib.TrialData()
-# t.Load(exp, mouse, trial)
-
-e2 = elib.EphysTrial().Load(exp, mouse, trial)
+e2 = elib.EphysTrial().Load(exp, mouse, trial, True)

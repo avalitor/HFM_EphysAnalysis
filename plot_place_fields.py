@@ -299,9 +299,9 @@ def plot_traj_hole_checks(data, spike_sample, crop_at_target = True, savefig=Fal
 
 if __name__ == '__main__':
        
-    exp = '2024-11-09'
-    mouse = 110
-    trial = 'Probe2'
+    exp = '2025-01-21' #2024-11-09 
+    mouse = 112
+    trial = '2'
     neuron = 0
     
     path_data =  cg.ROOT_DIR
@@ -322,5 +322,5 @@ if __name__ == '__main__':
     print(edata.firingRate[neuron])
     
     
-    plot_place_field(edata, edata.t_spikeTrains[neuron], crop_at_target=False, savefig=False)
-    # plot_traj_hole_checks(edata, edata.t_spikeTrains[neuron], crop_at_target=False, savefig=False)
+    # plot_place_field(edata, edata.t_spikeTrains[neuron], crop_at_target=False, savefig=False)
+    plot_traj_hole_checks(edata, edata.t_spikeTrains[neuron], crop_at_target=True, savefig=False)
