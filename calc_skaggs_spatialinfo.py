@@ -31,7 +31,7 @@ import config as cg
 # ============================================================================
 # Parameters
 # ============================================================================
-EXPERIMENTS = ['2024-11-09', '2025-01-21']
+EXPERIMENTS = ['2024-02-15', '2024-11-09', '2025-01-21']
 BINS        = 60                    # spatial bins per axis
 ARENA_RANGE = [[-65, 65], [-65, 65]]
 VEL_CUTOFF  = 2                     # cm/s — exclude low-speed samples
@@ -43,14 +43,17 @@ SHUFFLE_MAX_FRAC = 0.9              # max shift as fraction of recording
 
 EXCLUDED_PREFIXES = ()              # Include all trial types for spatial coverage
 
-SAVE_DIR = os.path.join(cg.ROOT_DIR, 'figs')
+SAVE_DIR = os.path.join(cg.ROOT_DIR, 'figs', 'skaggs')
 os.makedirs(SAVE_DIR, exist_ok=True)
 
+
 TYPE_COLORS = {
-    'Narrow Interneuron':           '#E63946',
-    'Wide Interneuron':             '#457B9D',
-    'Excitatory Principal Cell':    '#2A9D8F',
-    'Bursty Narrow Interneuron':    '#E9C46A',
+    "Granule Cell": "#c00021",
+    "Mossy Cell": "#358940",
+    "Narrow Interneuron": "#0050a0",
+    "Wide Interneuron": "#07CCC3",
+    "Excitatory Principal Cell": "#e36414",
+    "Bursty Narrow Interneuron": "#87147A",
 }
 
 # ============================================================================
