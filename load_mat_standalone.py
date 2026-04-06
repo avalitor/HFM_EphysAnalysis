@@ -13,7 +13,7 @@ import os
 import json
 
 # File paths
-PROCESSED_FILE_DIR = r'C:\Users\Kelly\PythonGraphingProjects\GitProject\HFM_EphysAnalysis\data\processedData'
+PROCESSED_FILE_DIR = r'C:\Users\Kelly\PythonCode\GitProject\HFM_EphysAnalysis\data\processedData'
 
 # helper function
 def unwrap(val):
